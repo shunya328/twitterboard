@@ -1,20 +1,39 @@
 const http = require('http');
-const hostname = 'localhost';
+const { isDeepStrictEqual } = require('util');
+const hostname = '127.0.0.1';
 const PORT = 3000;
+
 
 // httpサーバの定義
 const server = http.createServer((req, res) => {
-  // 全リクエストを処理
+  // 全リクエストを処理 
+
+
   res.statusCode = 200; //通信成功のステータスコード
   res.setHeader('Content-Type', 'text/html; charset=UTF-8'); //テキストを返す際、日本語を返すのでcharsetもセット・・・
 
   //ルーティング
+  const id = req.url.split('/').pop(); //URLから削除対象のIDを取得
+
   switch (req.url) { //リクエストされたurlが引数に入る
     case '/':
       topPage(req, res); //トップページ用の関数を呼んでいる
       break;
     case '/post':
       postPage(req, res); //投稿用ページの関数を呼んでいる
+      break;
+    case `/posts/${id}`: //削除を実行
+      deletePost(id, (err) => {
+        if (err) {
+          console.error(err.message);
+          res.statusCode = 500;
+          res.end('削除時にエラーが発生しました');
+          return;
+        }
+        console.log('投稿を削除しました');
+        res.statusCode = 200;
+        res.end('削除が完了しました');
+      });
       break;
     default:
       notFoundPage(req, res); //その他のリクエストをNot Foundページとして表示
@@ -59,20 +78,55 @@ const topPage = (req, res) => {
   header(req, res);
 
   //データベースから全データを取得
-  getAllPosts((err, posts) => {
-    if (err) {
-      console.error(err.message);
-      return;
-    }
+  if (req.method === 'GET') {
+    getAllPosts((err, posts) => {
+      if (err) {
+        console.error(err.message);
+        return;
+      }
 
-    res.write('<h2>トップページ</h2>');
-    res.write('<ul>');
-    for (let row of posts) {
-      res.write('<li>' + row.content + '</li>\n');
-    }
-    res.write('</ul>');
-    footer(req, res);
-  })
+      res.write('<h2>トップページ</h2>');
+      res.write('<ul>');
+      for (let row of posts) {
+        res.write('<li>');
+        if (row.is_deleted === 0) {
+          res.write(row.content);
+          res.write('<button class="delete-btn-' + row.id + '">削除</button>');
+        } else {
+          res.write('投稿は削除されました')
+        }
+        res.write('</li>\n');
+      }
+      res.write('</ul>');
+
+      // 削除ボタンのクリックイベントリスナーを設定
+      res.write('<script>');
+      res.write('document.addEventListener("DOMContentLoaded", () => {');
+      res.write('  const deleteButtons = document.querySelectorAll("[class^=\'delete-btn-\']");');
+      res.write('  deleteButtons.forEach((button) => {');
+      res.write('    button.addEventListener("click", (event) => {');
+      res.write('      const id = event.target.className.split(\'delete-btn-\')[1];');
+      res.write('      console.log("削除ボタンのID:", id);');
+      res.write('      fetch(`/posts/${id}`, { method: "DELETE" })');
+      res.write('        .then((response) => {');
+      res.write('          if (response.status === 200) {');
+      res.write('            console.log("投稿を削除しました");');
+      res.write('            window.location.href = "/";');
+      res.write('          } else {');
+      res.write('            console.error("削除エラー:", response.statusText);');
+      res.write('          }');
+      res.write('        })');
+      res.write('        .catch((error) => {');
+      res.write('          console.error("削除エラー:", error);');
+      res.write('        });');
+      res.write('    });');
+      res.write('  });');
+      res.write('});');
+      res.write('</script>');
+
+      footer(req, res);
+    })
+  }
 }
 
 // 投稿ページ
@@ -108,17 +162,17 @@ const postPage = (req, res, data) => {
             console.error(err.message);
             return;
           }
-          // posts.push(parseBody.kakikomi); //posts配列に、これまでの投稿を格納＆蓄積
-          res.write('<h2>投稿しました</h2>\n');
-          res.write(decodeURIComponent(parseBody.kakikomi)); //投稿をURLデコードしている。URLエンコードされた文字列というのは、%E6%8A こんな感じのやつ。それを普通の文字列に変換する
         })
+        // posts.push(parseBody.kakikomi); //posts配列に、これまでの投稿を格納＆蓄積
+        res.write('<h2>投稿しました</h2>\n');
+        res.write(`投稿内容: ${decodeURIComponent(parseBody.kakikomi)}`); //投稿をURLデコードしている。URLエンコードされた文字列というのは、%E6%8A こんな感じのやつ。それを普通の文字列に変換する
       }
       footer(req, res);
     });
   }
 }
 
-// その他のページ
+// その他のページ(404 Not Found)
 const notFoundPage = (req, res) => {
   res.statusCode = 404; //httpステータスコードを返す
   header(req, res);
@@ -132,7 +186,11 @@ const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('twitterboardDatabase.db')//sqliteデータベースを作成
 
 //テーブルの作成
-db.run(`CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT)`);
+db.run(`CREATE TABLE IF NOT EXISTS posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, 
+  content TEXT,
+  is_deleted INTEGER DEFAULT 0
+  )`);
 
 //データベースから全データを取得する関数
 const getAllPosts = (callback) => {
@@ -154,4 +212,16 @@ const insertPost = (content, callback) => {
     }
     callback(null);
   });
+}
+
+//データベースの特定の投稿を削除する関数(論理削除)
+const deletePost = (id, callback) => {
+  db.run(`UPDATE posts SET is_deleted = 1 WHERE id = ?`, [id], (err) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    callback(null);
+    console.log('deletePostが呼ばれました');
+  })
 }
