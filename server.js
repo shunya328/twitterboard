@@ -1,6 +1,6 @@
 const http = require('http');
 const { isDeepStrictEqual } = require('util');
-const { signUpPage, postSignUpPage, signInPage, topPage, getPostPage, postPostPage, notFoundPage } = require('./pages');
+const { signUpPage, postSignUpPage, signInPage, postSignInPage, topPage, getPostPage, postPostPage, notFoundPage } = require('./pages');
 const { deletePost, db } = require('./databaseUtils');
 
 //セッション
@@ -44,6 +44,9 @@ const server = http.createServer((req, res) => {
         break;
       case '/sign_up':
         postSignUpPage(req, res);
+        break;
+      case '/sign_in':
+        postSignInPage(req, res);
         break;
       default:
         notFoundPage(req, res);

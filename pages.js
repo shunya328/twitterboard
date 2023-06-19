@@ -1,5 +1,5 @@
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, insertPost, deletePost, insertUser } = require('./databaseUtils');
+const { getAllPosts, insertPost, deletePost, insertUser, findUser } = require('./databaseUtils');
 
 // サインアップページ
 const signUpPage = (req, res) => {
@@ -18,7 +18,7 @@ const signUpPage = (req, res) => {
 }
 
 // サインアップのPOSTメソッド
-const postSignUpPage = (req ,res ) => {
+const postSignUpPage = (req, res) => {
   header(req, res);
   //まずはPOSTで送られたデータを受け取る
   //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
@@ -45,7 +45,6 @@ const postSignUpPage = (req ,res ) => {
     footer(req, res);
     return;
   });
-
 }
 
 // サインインページ
@@ -61,6 +60,40 @@ const signInPage = (req, res) => {
 
   beforeLoginFooter(req, res);
   return;
+}
+
+// サインインの処理。POSTメソッド。
+const postSignInPage = (req, res) => {
+  header(req, res);
+
+  //まずはPOSTで送られたデータを受け取る
+  //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
+  let body = [];
+  req.on('data', (chunk) => {
+    body.push(chunk);
+  }).on('end', () => {
+    body = Buffer.concat(body).toString(); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。それをtoString()メソッドで文字列に変換しさらにbodyに格納
+    //パースする。ここでは、queryString.parse()メソッドを使って、文字列などを解析し、オブジェクトとして返します。
+    const queryString = require('querystring');
+    const parseBody = queryString.parse(body);
+
+    //ユーザの検索
+    findUser(parseBody.user_name, parseBody.user_password, (err, user) => {
+      if (err) {
+        console.error(err.message);
+        return;
+      }
+      if (user) {
+        console.log(user)
+        res.write('<h2>サインアップが成功しました</h2>\n');
+        res.write(`ようこそ！${user.name}さん！`)
+      } else {
+        res.write('<h2>サインインに失敗しました</h2>');
+      }
+      footer(req, res);
+      return;
+    });
+  });
 }
 
 
@@ -119,7 +152,6 @@ const topPage = (req, res) => {
   })
 }
 
-
 // 投稿ページ(GET)
 const getPostPage = (req, res, data) => {
   header(req, res);
@@ -174,6 +206,7 @@ module.exports = {
   signUpPage,
   postSignUpPage,
   signInPage,
+  postSignInPage,
   topPage,
   getPostPage,
   postPostPage,

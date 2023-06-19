@@ -67,10 +67,23 @@ const insertUser = (userName, userEmail, userPassword, callback) => {
     });
 }
 
+//データベースからユーザを検索する関数
+const findUser = (userName, userPassword, callback) => {
+  db.all(`SELECT * FROM users WHERE name = ? AND password = ?`,
+  [userName, userPassword], (err, rows) => {
+    if(err){
+      callback(err);
+      return;
+    }
+    callback(null, rows[0]);
+  });
+}
+
 module.exports = {
   db,
   getAllPosts,
   insertPost,
   deletePost,
-  insertUser
+  insertUser,
+  findUser
 }
