@@ -8,7 +8,6 @@ const PORT = 3000;
 const server = http.createServer((req, res) => {
   // 全リクエストを処理 
 
-
   res.statusCode = 200; //通信成功のステータスコード
   res.setHeader('Content-Type', 'text/html; charset=UTF-8'); //テキストを返す際、日本語を返すのでcharsetもセット・・・
 

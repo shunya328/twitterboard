@@ -3,12 +3,21 @@
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('twitterboardDatabase.db')//sqliteデータベースを作成
 
-//テーブルの作成
+//postsテーブルの作成
 db.run(`CREATE TABLE IF NOT EXISTS posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT, 
   content TEXT,
   is_deleted INTEGER DEFAULT 0
   )`);
+
+//usersテーブルの作成
+db.run(`CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT,
+  email TEXT,
+  password TEXT,
+  plofile TEXT DEFAULT ''
+)`)
 
 //データベースから全データを取得する関数
 const getAllPosts = (callback) => {
@@ -44,9 +53,24 @@ const deletePost = (id, callback) => {
   })
 }
 
+//データベースに新たにユーザ情報を登録する関数
+const insertUser = (userName, userEmail, userPassword, callback) => {
+  db.run(`INSERT INTO users (
+    name, email, password
+  ) VALUES (?, ?, ?)`,
+    [userName, userEmail, userPassword], (err) => {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null);
+    });
+}
+
 module.exports = {
   db,
   getAllPosts,
   insertPost,
-  deletePost
+  deletePost,
+  insertUser
 }
