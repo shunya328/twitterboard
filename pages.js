@@ -1,5 +1,5 @@
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, insertPost, deletePost, insertUser, findUser } = require('./databaseUtils');
+const { getAllPosts, insertPost, deletePost, insertUser, findUser, updateUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 
 // サインアップページ
@@ -142,6 +142,68 @@ const showPost = (req, res, id) => {
 }
 
 // マイページ
+const myPage = (req, res) => {
+  header(req, res);
+
+  res.write('<h2>マイページ</h2>\n');
+  res.write('<a href="/mypage/edit_profile">プロフィール編集</a>');
+
+  footer(req, res);
+}
+
+// プロフィール編集ページ
+const editProfilePage = (req, res) => {
+  header(req, res);
+
+  res.write('<h2>プロフィール編集ページ</h2>\n');
+  res.write('<form action="/mypage/edit_profile" method="post">')
+  res.write('<input type="text" name="user_name" placeholder="user_name"><br>');
+  res.write('<input type="email" name="user_email" placeholder="e-mail"><br>');
+  res.write('<input type="password" name="user_password" placeholder="password"><br>');
+  res.write('<textarea type="text" name="user_profile" placeholder="profile"></textarea><br>');
+  res.write('<input type="submit" value="編集する">');
+  res.write('</form>');
+
+  footer(req, res);
+}
+
+// （UPDATE）プロフィール編集実行！
+const updateEditProfilePage = (req, res, userID) => {
+  header(req, res);
+  //まずはPOSTで送られたデータを受け取る
+  //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
+  let body = [];
+  req.on('data', (chunk) => {
+    body.push(chunk);
+  }).on('end', () => {
+    body = Buffer.concat(body).toString(); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。それをtoString()メソッドで文字列に変換しさらにbodyに格納
+    //パースする。ここでは、queryString.parse()メソッドを使って、文字列などを解析し、オブジェクトとして返します。
+    const queryString = require('querystring');
+    const parseBody = queryString.parse(body);
+
+    // 現在ログインしているユーザの情報をアップデート
+    updateUser(userID, parseBody.user_name, parseBody.user_email, parseBody.user_password, parseBody.user_profile, (err) => {
+      if (err) {
+        console.error(err.message);
+        return;
+      }
+    });
+
+    const newProfile = {
+      userID: userID,
+      name: parseBody.user_name,
+      email: parseBody.user_email,
+      profile: parseBody.user_profile
+    };
+
+    console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
+    res.write('<h2>プロフィールは更新されました</h2>');
+    footer(req, res);
+
+    // サーバ側のセッション情報を返り値に
+    return newProfile;
+  });
+}
 
 // その他のページ(404 Not Found)
 const notFoundPage = (req, res) => {
@@ -158,5 +220,8 @@ module.exports = {
   postPage,
   postPostPage,
   showPost,
+  myPage,
+  editProfilePage,
+  updateEditProfilePage,
   notFoundPage
 }

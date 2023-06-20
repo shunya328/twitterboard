@@ -1,5 +1,5 @@
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, insertPost, deletePost, insertUser, findUser } = require('./databaseUtils');
+const { getAllPosts, insertPost, deletePost, insertUser, findUser, updateUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 
 
@@ -51,7 +51,7 @@ const postSignInPage = (req, res) => {
         res.statusCode = 200;
 
         header(req, res);
-        res.write('<h2>サインアップが成功しました</h2>\n');
+        res.write('<h2>サインインに成功しました</h2>\n');
         res.write(`ようこそ！${user.name}さん！`)
       } else {
         beforeLoginHeader(req, res);
@@ -68,7 +68,6 @@ const postSignInPage = (req, res) => {
 
 // サインアップのPOSTメソッド
 const postSignUpPage = (req, res) => {
-  header(req, res);
   //まずはPOSTで送られたデータを受け取る
   //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
   let body = [];
@@ -88,11 +87,50 @@ const postSignUpPage = (req, res) => {
           return;
         }
       })
-      res.write('<h2>サインアップが完了しました</h2>\n');
-      res.write(`ユーザ名: ${parseBody.user_name}, メールアドレス: ${parseBody.user_email}`);
+
+      //先ほどデータベースに格納したユーザの検索
+      findUser(parseBody.user_name, parseBody.user_password, (err, user) => {
+        if (err) {
+          console.error(err.message);
+          return;
+        }
+        if (user) {
+          console.log(user);
+
+          // サインアップ成功時にセッションIDを生成
+          const sessionID = generateSessionID(); //32桁のランダムな文字列を生成＆格納
+
+          // セッションデータに必要な情報を保存
+          // sessions.set(sessionID, { userID: user.id, name: user.name, email: user.email, profile: user.profile });
+          sessions[sessionID] = {
+            userID: user.id,
+            name: user.name,
+            email: user.email,
+            profile: user.profile
+          };
+          console.log(`sessions[sessionID].nameは、${sessions[sessionID].name}`);
+          console.log(`userIDは、${user.id}`)
+
+          // セッションIDをクライアントに送信(cookie)
+          res.setHeader('Set-Cookie', `sessionID=${sessionID}; Path=/`);
+
+          // ログイン成功のレスポンスを返す
+          res.statusCode = 200;
+
+          header(req, res);
+          res.write('<h2>サインアップに成功しました</h2>\n');
+          res.write(`ようこそ！${user.name}さん！`)
+        } else {
+          beforeLoginHeader(req, res);
+          res.write('<h2>サインアップに失敗しました</h2>');
+          res.write('<h5>ユーザ名やメールアドレスが重複しているかもしれません</h5>');
+          res.write('<a href="/sign_in">再度サインインする</a><br>');
+          res.write('<a href="/sign_up">新規登録</a>');
+        }
+        footer(req, res);
+        return;
+      });
     }
-    footer(req, res);
-    return;
   });
 }
 

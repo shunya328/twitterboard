@@ -1,8 +1,8 @@
 const http = require('http');
 const { isDeepStrictEqual } = require('util');
-const { signUpPage, signInPage, topPage, postPage, postPostPage, showPost, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
-const { deletePost, db } = require('./databaseUtils');
+const { deletePost, db, updateUser } = require('./databaseUtils');
 
 const hostname = '127.0.0.1';
 const PORT = 3000;
@@ -14,11 +14,12 @@ const server = http.createServer((req, res) => {
 
   // セッションIDの取得
   const sessionID = req.headers.cookie ? req.headers.cookie.split('=')[1] : null
-  console.log(`sessionIDは、${sessionID}`);
+  console.log(`現在のsessionIDは、          →${sessionID}`);
   // console.log(`サーバ側で保持しているセッションのユーザIDは、 ${sessions[sessionID]}`)
-  console.log(JSON.stringify(sessions[sessionID]));
 
-  // セッションのチェック(サインインorサインアップページで無い時に、さらにセッションが無い時に)
+  console.log(`現在のsessions[sessionID]は、→${JSON.stringify(sessions[sessionID])}`);
+
+  // 【セッションチェック】(サインインorサインアップページで無い時に、さらにセッションが無い時に)
   if (req.url !== '/sign_in' && req.url !== '/sign_up' && !sessions[sessionID]) {
     // ログインしていない場合、サインインページにリダイレクト
     res.writeHead(302, { 'Location': '/sign_in' });
@@ -26,7 +27,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 逆に、サインインしている状態であれば、サインイン・サインアップページに飛ばないようにする。
+  // 【セッションチェック】逆に、サインインしている状態であれば、サインイン・サインアップページに飛ばないようにする。
   if ((req.url === '/sign_in' || req.url === '/sign_up') && sessions[sessionID]) {
     // トップページにリダイレクト
     res.writeHead(302, { 'Location': '/' });
@@ -34,9 +35,9 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  //ルーティング
   const id = req.url.split('/').pop(); //URLの一番後ろのIDを取得
 
+  //ルーティング
   if (req.method === 'GET') {
     switch (req.url) { //リクエストされたurlが引数に入る
       case '/':
@@ -53,6 +54,12 @@ const server = http.createServer((req, res) => {
         break;
       case `/post/${id}`:
         showPost(req, res, id);
+        break;
+      case '/mypage':
+        myPage(req, res);
+        break;
+      case '/mypage/edit_profile':
+        editProfilePage(req, res);
         break;
       default:
         notFoundPage(req, res); //その他のリクエストをNot Foundページとして表示
@@ -71,6 +78,12 @@ const server = http.createServer((req, res) => {
         break;
       case '/logout':
         postLogout(req, res, sessions, sessionID);
+        break;
+      case '/mypage/edit_profile':
+        // updateEditProfilePageを非同期で実行し、その結果を待つ
+        const updatedUser = updateEditProfilePage(req, res, sessions[sessionID].userID);
+        console.log(`updatedUser = ${updateUser}`);
+        sessions[sessionID] = updatedUser;
         break;
       default:
         notFoundPage(req, res);

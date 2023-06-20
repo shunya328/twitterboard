@@ -13,8 +13,8 @@ db.run(`CREATE TABLE IF NOT EXISTS posts (
 //usersテーブルの作成
 db.run(`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
+  name TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
   profile TEXT DEFAULT ''
 )`)
@@ -67,16 +67,28 @@ const insertUser = (userName, userEmail, userPassword, callback) => {
     });
 }
 
+//データベース上のユーザ情報を変更する関数
+const updateUser = (userID, userName, userEmail, userPassword, userProfile, callback) => {
+  db.run(`UPDATE users SET name = ?, email = ?, password = ?, profile = ? WHERE id = ?`,
+    [userName, userEmail, userPassword, userProfile, userID], (err) => {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null);
+    });
+}
+
 //データベースからユーザを検索する関数
 const findUser = (userName, userPassword, callback) => {
   db.all(`SELECT * FROM users WHERE name = ? AND password = ?`,
-  [userName, userPassword], (err, rows) => {
-    if(err){
-      callback(err);
-      return;
-    }
-    callback(null, rows[0]);
-  });
+    [userName, userPassword], (err, rows) => {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, rows[0]);
+    });
 }
 
 module.exports = {
@@ -85,5 +97,6 @@ module.exports = {
   insertPost,
   deletePost,
   insertUser,
+  updateUser,
   findUser
 }
