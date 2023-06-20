@@ -1,23 +1,41 @@
 const http = require('http');
 const { isDeepStrictEqual } = require('util');
-const { signUpPage, postSignUpPage, signInPage, postSignInPage, topPage, getPostPage, postPostPage, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, postPage, postPostPage, showPost, notFoundPage } = require('./pages');
+const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db } = require('./databaseUtils');
-
-//セッション
-const sessions = {};
 
 const hostname = '127.0.0.1';
 const PORT = 3000;
 
 // httpサーバの定義
 const server = http.createServer((req, res) => {
-  // 全リクエストを処理 
-
   res.statusCode = 200; //通信成功のステータスコード
   res.setHeader('Content-Type', 'text/html; charset=UTF-8'); //テキストを返す際、日本語を返すのでcharsetもセット・・・
 
+  // セッションIDの取得
+  const sessionID = req.headers.cookie ? req.headers.cookie.split('=')[1] : null
+  console.log(`sessionIDは、${sessionID}`);
+  // console.log(`サーバ側で保持しているセッションのユーザIDは、 ${sessions[sessionID]}`)
+  console.log(JSON.stringify(sessions[sessionID]));
+
+  // セッションのチェック(サインインorサインアップページで無い時に、さらにセッションが無い時に)
+  if (req.url !== '/sign_in' && req.url !== '/sign_up' && !sessions[sessionID]) {
+    // ログインしていない場合、サインインページにリダイレクト
+    res.writeHead(302, { 'Location': '/sign_in' });
+    res.end();
+    return;
+  }
+
+  // 逆に、サインインしている状態であれば、サインイン・サインアップページに飛ばないようにする。
+  if ((req.url === '/sign_in' || req.url === '/sign_up') && sessions[sessionID]) {
+    // トップページにリダイレクト
+    res.writeHead(302, { 'Location': '/' });
+    res.end();
+    return;
+  }
+
   //ルーティング
-  const id = req.url.split('/').pop(); //URLから削除対象のIDを取得
+  const id = req.url.split('/').pop(); //URLの一番後ろのIDを取得
 
   if (req.method === 'GET') {
     switch (req.url) { //リクエストされたurlが引数に入る
@@ -26,12 +44,15 @@ const server = http.createServer((req, res) => {
         break;
       case '/sign_up':
         signUpPage(req, res);
-        break
+        break;
       case '/sign_in':
         signInPage(req, res);
-        break
+        break;
       case '/post':
-        getPostPage(req, res); //投稿用ページの関数を呼んでいる
+        postPage(req, res); //投稿用ページの関数を呼んでいる
+        break;
+      case `/post/${id}`:
+        showPost(req, res, id);
         break;
       default:
         notFoundPage(req, res); //その他のリクエストをNot Foundページとして表示
@@ -47,6 +68,9 @@ const server = http.createServer((req, res) => {
         break;
       case '/sign_in':
         postSignInPage(req, res);
+        break;
+      case '/logout':
+        postLogout(req, res, sessions, sessionID);
         break;
       default:
         notFoundPage(req, res);

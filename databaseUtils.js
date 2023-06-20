@@ -13,10 +13,10 @@ db.run(`CREATE TABLE IF NOT EXISTS posts (
 //usersテーブルの作成
 db.run(`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT,
-  email TEXT,
-  password TEXT,
-  plofile TEXT DEFAULT ''
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  password TEXT NOT NULL,
+  profile TEXT DEFAULT ''
 )`)
 
 //データベースから全データを取得する関数
