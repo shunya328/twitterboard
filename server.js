@@ -14,7 +14,7 @@ const server = http.createServer((req, res) => {
 
   // セッションIDの取得
   const sessionID = req.headers.cookie ? req.headers.cookie.split('=')[1] : null
-  console.log(`現在のsessionIDは、          →${sessionID}`);
+  console.log(`現在のcookieは、             →${sessionID}`);
   // console.log(`サーバ側で保持しているセッションのユーザIDは、 ${sessions[sessionID]}`)
 
   console.log(`現在のsessions[sessionID]は、→${JSON.stringify(sessions[sessionID])}`);
@@ -81,9 +81,17 @@ const server = http.createServer((req, res) => {
         break;
       case '/mypage/edit_profile':
         // updateEditProfilePageを非同期で実行し、その結果を待つ
-        const updatedUser = updateEditProfilePage(req, res, sessions[sessionID].userID);
-        console.log(`updatedUser = ${updateUser}`);
-        sessions[sessionID] = updatedUser;
+        // const updatedUser = updateEditProfilePage(req, res, sessions[sessionID].userID);
+        // console.log(`updatedUser = ${updateUser}`);
+        // sessions[sessionID] = updatedUser;
+        updateEditProfilePage(req, res, sessions[sessionID].userID)
+          .then((updateUser) => {
+            console.log(`updatedUser = ${updateUser}`);
+            sessions[sessionID] = updateUser;
+          }).catch((error) => {
+            // エラーハンドリング
+            console.error(error);
+          });
         break;
       default:
         notFoundPage(req, res);

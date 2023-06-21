@@ -169,39 +169,44 @@ const editProfilePage = (req, res) => {
 
 // （UPDATE）プロフィール編集実行！
 const updateEditProfilePage = (req, res, userID) => {
-  header(req, res);
-  //まずはPOSTで送られたデータを受け取る
-  //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
-  let body = [];
-  req.on('data', (chunk) => {
-    body.push(chunk);
-  }).on('end', () => {
-    body = Buffer.concat(body).toString(); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。それをtoString()メソッドで文字列に変換しさらにbodyに格納
-    //パースする。ここでは、queryString.parse()メソッドを使って、文字列などを解析し、オブジェクトとして返します。
-    const queryString = require('querystring');
-    const parseBody = queryString.parse(body);
+  return new Promise((resolve, reject) => {
 
-    // 現在ログインしているユーザの情報をアップデート
-    updateUser(userID, parseBody.user_name, parseBody.user_email, parseBody.user_password, parseBody.user_profile, (err) => {
-      if (err) {
-        console.error(err.message);
-        return;
-      }
-    });
+    header(req, res);
+    //まずはPOSTで送られたデータを受け取る
+    //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
+    let body = [];
+    req.on('data', (chunk) => {
+      body.push(chunk);
+    }).on('end', () => {
+      body = Buffer.concat(body).toString(); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。それをtoString()メソッドで文字列に変換しさらにbodyに格納
+      //パースする。ここでは、queryString.parse()メソッドを使って、文字列などを解析し、オブジェクトとして返します。
+      const queryString = require('querystring');
+      const parseBody = queryString.parse(body);
 
-    const newProfile = {
-      userID: userID,
-      name: parseBody.user_name,
-      email: parseBody.user_email,
-      profile: parseBody.user_profile
-    };
+      // 現在ログインしているユーザの情報をアップデート
+      updateUser(userID, parseBody.user_name, parseBody.user_email, parseBody.user_password, parseBody.user_profile, (err) => {
+        if (err) {
+          console.error(err.message);
+          reject(err); // エラー時にreject
+          return;
+        }
+      });
 
-    console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
-    res.write('<h2>プロフィールは更新されました</h2>');
-    footer(req, res);
+      const newProfile = {
+        userID: userID,
+        name: parseBody.user_name,
+        email: parseBody.user_email,
+        profile: parseBody.user_profile
+      };
 
-    // サーバ側のセッション情報を返り値に
-    return newProfile;
+      console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
+      res.write('<h2>プロフィールは更新されました</h2>');
+      footer(req, res);
+
+      // サーバ側のセッション情報を返り値に
+      resolve(newProfile); // resolveの引数に渡す
+
+    })
   });
 }
 
