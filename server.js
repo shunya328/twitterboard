@@ -1,6 +1,8 @@
 const http = require('http');
 const { isDeepStrictEqual } = require('util');
-const { signUpPage, signInPage, topPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, notFoundPage } = require('./pages');
+const path = require('path');
+const fs = require('fs');
+const { signUpPage, signInPage, topPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, readImageFile, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser } = require('./databaseUtils');
 
@@ -62,7 +64,12 @@ const server = http.createServer((req, res) => {
         editProfilePage(req, res);
         break;
       default:
-        notFoundPage(req, res); //その他のリクエストをNot Foundページとして表示
+        // 画像ファイルを読み込む処理
+        if (req.url.startsWith('/public/images/')) {
+          readImageFile(req, res);
+        } else {
+          notFoundPage(req, res);
+        }
         break;
     }
   } else if (req.method === 'POST') {

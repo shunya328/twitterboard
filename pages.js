@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
 const { getAllPosts, insertPost, deletePost, insertUser, findUser, updateUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
@@ -53,6 +54,9 @@ const topPage = (req, res) => {
       res.write('<li>');
       if (row.is_deleted === 0) {
         res.write(`<a href="/post/${row.id}">${row.content}</a>`);
+        if (row.image) {
+          res.write(`<img src="${row.image}" alt="投稿画像" />`);
+        }
         res.write('<button class="delete-btn-' + row.id + '">削除</button>');
       } else {
         res.write('投稿は削除されました')
@@ -257,6 +261,25 @@ const updateEditProfilePage = (req, res, userID) => {
   });
 }
 
+// 画像ファイルを読み込む関数
+const readImageFile = (req,res) =>{
+  const fileName = req.url.split('/').pop();
+  const imagePath = path.join(__dirname, req.url);
+
+  fs.readFile(imagePath, (err, data) => {
+    if (err) {
+      console.error(err);
+      res.statusCode = 500;
+      res.end('Internal Server Error');
+      return;
+    }
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.statusCode = 200;
+    res.end(data);
+  });
+}
+
 // その他のページ(404 Not Found)
 const notFoundPage = (req, res) => {
   res.statusCode = 404; //httpステータスコードを返す
@@ -275,5 +298,6 @@ module.exports = {
   myPage,
   editProfilePage,
   updateEditProfilePage,
+  readImageFile,
   notFoundPage
 }

@@ -48,24 +48,26 @@ const insertPost = (content, image) => {
       fs.mkdirSync(path.join(__dirname, 'public', 'images'), { recursive: true }); //保存先ディレクトリがない場合、作る
       const imagePath = path.join(__dirname, 'public', 'images', fileName); //画像の保存先
       fs.writeFileSync(imagePath, image, 'binary') //画像を保存する
+      // "/public/images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
+      const imagePathInDB = imagePath.replace(/.*\/public\//, '/public/');
 
       // データベースに投稿の情報を格納
-      db.run(`INSERT INTO posts (content, image) VALUES (?, ?)`, [content, imagePath], (err) => {
+      db.run(`INSERT INTO posts (content, image) VALUES (?, ?)`, [content, imagePathInDB], (err) => {
         if (err) {
           reject(err);
         } else {
-          resolve(imagePath);
+          resolve(imagePathInDB);
         }
       });
     } else {
-      const imagePath = null;
+      const imagePathInDB = null;
 
       // データベースに投稿の情報を格納
-      db.run(`INSERT INTO posts (content, image) VALUES (?, ?)`, [content, imagePath], (err) => {
+      db.run(`INSERT INTO posts (content, image) VALUES (?, ?)`, [content, imagePathInDB], (err) => {
         if (err) {
           reject(err);
         } else {
-          resolve(imagePath);
+          resolve(imagePathInDB);
         }
       });
     }
