@@ -39,41 +39,37 @@ const getAllPosts = (callback) => {
   });
 }
 
-//データベースに文字の投稿を格納する関数
-const insertPostContent = (content, callback) => {
-  db.run(`INSERT INTO posts (content) VALUES (?)`, [content], (err) => {
-    if (err) {
-      callback(err);
-      return;
-    }
-    callback(null);
-  });
-}
+//データベースに文字＆画像を同時に投稿する関数
+const insertPost = (content, image) => {
+  return new Promise((resolve, reject) => {
+    if (image) {
+      //　画像の前準備
+      const fileName = generateSessionID() + '.jpg'; //ランダムな文字列を画像の名前にする
+      fs.mkdirSync(path.join(__dirname, 'public', 'images'), { recursive: true }); //保存先ディレクトリがない場合、作る
+      const imagePath = path.join(__dirname, 'public', 'images', fileName); //画像の保存先
+      fs.writeFileSync(imagePath, image, 'binary') //画像を保存する
 
-//データベースに画像の投稿を格納する関数
-const insertPostImage = (image, callback) => {
-  // console.log('image:',image);
-  const fileName = generateSessionID() + '.jpg';
-  fs.mkdirSync(path.join(__dirname, 'public', 'images'), { recursive: true });
-  const imagePath = path.join(__dirname, 'public', 'images', fileName);
-  // const imageBuffer = image.slice(4, -2); // バッファオブジェクトそのものを使用する場合
-  // const imageBuffer = Buffer.from(image.split('\r\n').slice(4, -2).join('\r\n'), 'binary'); //バイナリデータとしてBufferオブジェクトを作成
-  // console.log('imageはisBuffer？:',Buffer.isBuffer(image));
-  // const imageBuffer = Buffer.isBuffer(image) ? image : Buffer.from(image, 'binary');
-  // console.log('imageBuffer:',imageBuffer);
-  //画像をサーバに保存
-  // fs.writeFileSync(imagePath, imageBuffer, 'binary');
-  fs.writeFileSync(imagePath, image, 'binary')
+      // データベースに投稿の情報を格納
+      db.run(`INSERT INTO posts (content, image) VALUES (?, ?)`, [content, imagePath], (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(imagePath);
+        }
+      });
+    } else {
+      const imagePath = null;
 
-  //データベースへ、画像のパスを保存
-  const imagePathInDB = '/images/' + fileName; //ファイルが保存されるパス
-  db.run(`INSERT INTO posts (image) VALUES (?)`, [imagePathInDB], (err) => {
-    if (err) {
-      callback(err);
-      return;
+      // データベースに投稿の情報を格納
+      db.run(`INSERT INTO posts (content, image) VALUES (?, ?)`, [content, imagePath], (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(imagePath);
+        }
+      });
     }
   })
-  callback(null, imagePathInDB);
 }
 
 //データベースの特定の投稿を削除する関数(論理削除)
@@ -129,8 +125,7 @@ const findUser = (userName, userPassword, callback) => {
 module.exports = {
   db,
   getAllPosts,
-  insertPostContent,
-  insertPostImage,
+  insertPost,
   deletePost,
   insertUser,
   updateUser,

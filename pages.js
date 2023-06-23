@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, insertPostContent, insertPostImage, deletePost, insertUser, findUser, updateUser } = require('./databaseUtils');
+const { getAllPosts, insertPost, deletePost, insertUser, findUser, updateUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 
 // サインアップページ
@@ -145,15 +145,7 @@ const postPostPage = (req, res, data) => {
   }).on('end', () => {
     const queryString = require('querystring');
     const parseBody = queryString.parse(body);
-    // console.log('parseされたbodyデータは:',parseBody);
-    // console.log('chunkデータを結合した直後のbody:',body);
-    // console.log(body);
     body = Buffer.concat(body).toString('binary'); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。
-    // console.log('bodyをbase64で文字列に変換後:',body);
-
-    //パースする。ここでは、queryString.parse()メソッドを使って、文字列などを解析し、オブジェクトとして返します。
-    // const queryString = require('querystring');
-    // const parseBody = queryString.parse(body);
 
     // フォームデータの解析
     const contentType = req.headers['content-type'];
@@ -164,47 +156,25 @@ const postPostPage = (req, res, data) => {
 
       // フォームデータの取得
       const { kakikomi, image } = formData;
-      // console.log('kakikomiのデータ:',kakikomi);
-      // console.log('imageのデータ:',image);
-      // console.log('imageのデータここまで')
 
-      if (kakikomi) {
-        // テキストの投稿データがある場合の処理
-        insertPostContent(kakikomi, (err) => {
-          if (err) {
-            console.error(err.message);
-            return;
-          }
-        });
-        res.write('<h2>ツイート（文字）投稿しました</h2>\n');
-        res.write(`投稿内容: ${decodeURIComponent(kakikomi)}`);
-      }
-
-      if (image) {
-        // 画像の処理
-        // const fileNameMatch = image.match(/filename="([^"]+)"/);
-        // const fileName = fileNameMatch && fileNameMatch[1];
-
-        // if (fileName) {
-          //ファイル名が取得できた時、画像ファイルがアップロードされていることがわかる
-          insertPostImage(image, (err, imagePathInDB) => {
-            if (err) {
-              console.error(err.message);
-              return;
-            }
+      if (kakikomi || image) {
+        insertPost(kakikomi, image)
+          .then((imagePath) => {
+            res.write('<h2>ツイート（文字）投稿しました</h2>\n');
+            res.write(`投稿内容: ${decodeURIComponent(kakikomi)}`);
             res.write('<h2>ツイート（画像）投稿しました</h2>\n');
-            res.write(`画像パス: ${imagePathInDB}`);
+            res.write(`画像パス: ${imagePath}`);
+            footer(req, res);
           })
-        // } else {
-          // ファイル名が取得できない場合、アップロードで問題が生じた
-          // console.error('Invalid image file...');
-        // }
+          .catch((err) => {
+            console.error(err.message);
+            res.write('<h2>エラーが発生しました</h2>\n');
+            footer(req, res);
+          })
       }
     }
-
-    footer(req, res);
-    return;
-  });
+  return;
+});
 }
 
 // 投稿の詳細画面(GET)
