@@ -238,25 +238,26 @@ const updateEditProfilePage = (req, res, userID) => {
       updateUser(userID, parseBody.user_name, parseBody.user_email, parseBody.user_password, parseBody.user_profile, (err) => {
         if (err) {
           console.error(err.message);
+          res.write('<h2>プロフィールの更新に失敗しました</h2><br>');
+          res.write(`<h4>${err.message}</h4>`);
           reject(err); // エラー時にreject
+          footer(req, res);
           return;
         }
+        const newProfile = {
+          userID: userID,
+          name: parseBody.user_name,
+          email: parseBody.user_email,
+          profile: parseBody.user_profile
+        };
+  
+        console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
+        res.write('<h2>プロフィールは更新されました</h2>');
+        footer(req, res);
+  
+        // サーバ側のセッション情報を返り値に
+        resolve(newProfile); // resolveの引数に渡す
       });
-
-      const newProfile = {
-        userID: userID,
-        name: parseBody.user_name,
-        email: parseBody.user_email,
-        profile: parseBody.user_profile
-      };
-
-      console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
-      res.write('<h2>プロフィールは更新されました</h2>');
-      footer(req, res);
-
-      // サーバ側のセッション情報を返り値に
-      resolve(newProfile); // resolveの引数に渡す
-
     })
   });
 }

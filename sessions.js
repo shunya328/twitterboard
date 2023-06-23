@@ -1,5 +1,5 @@
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, insertPost, deletePost, insertUser, findUser, updateUser } = require('./databaseUtils');
+const { getAllPosts, insertPost, deletePost, insertUser, findUserSignIn, findUserSignUp, updateUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 
 
@@ -22,7 +22,7 @@ const postSignInPage = (req, res) => {
     const parseBody = queryString.parse(body);
 
     //ユーザの検索
-    findUser(parseBody.user_name, parseBody.user_password, (err, user) => {
+    findUserSignIn(parseBody.user_name, parseBody.user_password, (err, user) => {
       if (err) {
         console.error(err.message);
         return;
@@ -79,7 +79,7 @@ const postSignUpPage = (req, res) => {
     const queryString = require('querystring');
     const parseBody = queryString.parse(body);
 
-    if (parseBody.user_name) {
+    if (parseBody.user_name && parseBody.user_email && parseBody.user_password) {
       //データベースに投稿を格納
       insertUser(parseBody.user_name, parseBody.user_email, parseBody.user_password, (err) => {
         if (err) {
@@ -89,7 +89,7 @@ const postSignUpPage = (req, res) => {
       })
 
       //先ほどデータベースに格納したユーザの検索
-      findUser(parseBody.user_name, parseBody.user_password, (err, user) => {
+      findUserSignUp(parseBody.user_name, parseBody.user_email, parseBody.user_password, (err, user) => {
         if (err) {
           console.error(err.message);
           return;
@@ -124,7 +124,7 @@ const postSignUpPage = (req, res) => {
           beforeLoginHeader(req, res);
           res.write('<h2>サインアップに失敗しました</h2>');
           res.write('<h5>ユーザ名やメールアドレスが重複しているかもしれません</h5>');
-          res.write('<a href="/sign_in">再度サインインする</a><br>');
+          res.write('<a href="/sign_in">サインイン</a><br>');
           res.write('<a href="/sign_up">新規登録</a>');
         }
         footer(req, res);

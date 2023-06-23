@@ -25,7 +25,8 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
   email TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
   profile TEXT DEFAULT '',
-  profile_image TEXT
+  profile_image TEXT,
+  is_deleted INTEGER DEFAULT 0
 )`)
 
 //データベースから全データを取得する関数
@@ -88,34 +89,146 @@ const deletePost = (id, callback) => {
 
 //データベースに新たにユーザ情報を登録する関数
 const insertUser = (userName, userEmail, userPassword, callback) => {
-  db.run(`INSERT INTO users (
+  const isUserNameDuplicate = { value: false };
+  const isUserEmailDuplicate = { value: false };
+  //ユーザ名の重複チェック
+  db.get('SELECT COUNT (*) AS count FROM users WHERE name = ?', [userName], (err, row) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    if (row.count > 0) {
+      const error = new Error('同じユーザ名が既に存在しています');
+      callback(error);
+      isUserNameDuplicate.value = true;
+      return;
+    }
+  });
+
+  //メールアドレスの重複チェック
+  db.get('SELECT COUNT (*) AS count FROM users WHERE email = ?', [userEmail], (err, row) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    if (row.count > 0) {
+      const error = new Error('同じメールアドレスが既に存在しています');
+      callback(error);
+      isUserEmailDuplicate.value = true;
+      return;
+    }
+  });
+
+  //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを新規登録
+  if (!isUserNameDuplicate && !isUserEmailDuplicate) {
+    db.run(`INSERT INTO users (
     name, email, password
   ) VALUES (?, ?, ?)`,
-    [userName, userEmail, userPassword], (err) => {
-      if (err) {
-        callback(err);
-        return;
-      }
-      callback(null);
-    });
+      [userName, userEmail, userPassword], (err) => {
+        if (err) {
+          callback(err);
+          return;
+        }
+        callback(null);
+      });
+  }
 }
 
 //データベース上のユーザ情報を変更する関数
 const updateUser = (userID, userName, userEmail, userPassword, userProfile, callback) => {
-  db.run(`UPDATE users SET name = ?, email = ?, password = ?, profile = ? WHERE id = ?`,
-    [userName, userEmail, userPassword, userProfile, userID], (err) => {
+  const isUserNameDuplicate = { value: false };
+  const isUserEmailDuplicate = { value: false };
+
+  //ユーザ名の重複チェック
+  db.get('SELECT COUNT (*) AS count FROM users WHERE name = ? AND id != ?', [userName, userID], (err, row) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    if (row.count > 0) {
+      const error = new Error('同じユーザ名が既に存在しています');
+      callback(error);
+      isUserNameDuplicate.value = true;
+      return;
+    }
+  });
+
+  //メールアドレスの重複チェック
+  db.get('SELECT COUNT (*) AS count FROM users WHERE email = ? AND id != ?', [userEmail, userID], (err, row) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    if (row.count > 0) {
+      const error = new Error('同じメールアドレスが既に存在しています');
+      callback(error);
+      isUserEmailDuplicate.value = true;
+      return;
+    }
+  });
+
+  //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを更新
+  if (!isUserNameDuplicate && !isUserEmailDuplicate) {
+    //データの書き込み
+    if (userName) {
+      db.run(`UPDATE users SET name = ? WHERE id = ?`,
+        [userName, userID], (err) => {
+          if (err) {
+            callback(err);
+            return;
+          }
+          callback(null);
+        });
+    }
+    if (userEmail) {
+      db.run(`UPDATE users SET email = ? WHERE id = ?`,
+        [userEmail, userID], (err) => {
+          if (err) {
+            callback(err);
+            return;
+          }
+          callback(null);
+        });
+    }
+    if (userPassword) {
+      db.run(`UPDATE users SET password = ? WHERE id = ?`,
+        [userPassword, userID], (err) => {
+          if (err) {
+            callback(err);
+            return;
+          }
+          callback(null);
+        });
+    }
+    if (userProfile) {
+      db.run(`UPDATE users SET profile = ? WHERE id = ?`,
+        [userProfile, userID], (err) => {
+          if (err) {
+            callback(err);
+            return;
+          }
+          callback(null);
+        });
+    }
+  }
+}
+
+//データベースからユーザを検索する関数(サインインのとき)
+const findUserSignIn = (userName, userPassword, callback) => {
+  db.all(`SELECT * FROM users WHERE name = ? AND password = ?`,
+    [userName, userPassword], (err, rows) => {
       if (err) {
         callback(err);
         return;
       }
-      callback(null);
+      callback(null, rows[0]);
     });
 }
 
-//データベースからユーザを検索する関数
-const findUser = (userName, userPassword, callback) => {
-  db.all(`SELECT * FROM users WHERE name = ? AND password = ?`,
-    [userName, userPassword], (err, rows) => {
+//データベースからユーザを検索する（サインアップのとき）
+const findUserSignUp = (userName, userEmail, userPassword, callback) => {
+  db.all(`SELECT * FROM users WHERE name = ? AND email = ? AND password = ?`,
+    [userName, userEmail, userPassword], (err, rows) => {
       if (err) {
         callback(err);
         return;
@@ -131,5 +244,6 @@ module.exports = {
   deletePost,
   insertUser,
   updateUser,
-  findUser
+  findUserSignIn,
+  findUserSignUp
 }
