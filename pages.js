@@ -129,7 +129,7 @@ const postPostPage = (req, res, data) => {
 
       if (nameMatch) {
         const fieldName = nameMatch[1];
-        // formData[fieldName] = Buffer.from(content,'binary');
+        // formData[fieldName] = Buffer.from(content, 'binary').toString('utf-8');
         formData[fieldName] = content;
       }
     }
@@ -146,6 +146,7 @@ const postPostPage = (req, res, data) => {
     const queryString = require('querystring');
     const parseBody = queryString.parse(body);
     body = Buffer.concat(body).toString('binary'); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。
+    // body = Buffer.concat(body,'binary').toString('utf-8'); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。
 
     // フォームデータの解析
     const contentType = req.headers['content-type'];
@@ -156,12 +157,13 @@ const postPostPage = (req, res, data) => {
 
       // フォームデータの取得
       const { kakikomi, image } = formData;
+      const kakikomiToString = Buffer.from(kakikomi, 'binary').toString('utf-8') //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
 
-      if (kakikomi || image) {
-        insertPost(kakikomi, image)
+      if (kakikomiToString || image) {
+        insertPost(kakikomiToString, image)
           .then((imagePath) => {
             res.write('<h2>ツイート（文字）投稿しました</h2>\n');
-            res.write(`投稿内容: ${decodeURIComponent(kakikomi)}`);
+            res.write(`投稿内容: ${decodeURIComponent(kakikomiToString)}`);
             res.write('<h2>ツイート（画像）投稿しました</h2>\n');
             res.write(`画像パス: ${imagePath}`);
             footer(req, res);
