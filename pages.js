@@ -1,5 +1,6 @@
+const fs = require('fs');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, insertPost, deletePost, insertUser, findUser, updateUser } = require('./databaseUtils');
+const { getAllPosts, insertPostContent, insertPostImage, deletePost, insertUser, findUser, updateUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 
 // サインアップページ
@@ -95,7 +96,11 @@ const postPage = (req, res, data) => {
   header(req, res);
 
   res.write('<h2>投稿ページです</h2>\n');
-  res.write('<form action="/post" method="post"><textarea name="kakikomi" style="width:80%;height:100px"></textarea><input type="submit" value="投稿"></form>');
+  res.write(`<form action="/post" method="post" enctype="multipart/form-data">
+  <textarea name="kakikomi" style="width:80%;height:100px"></textarea><br>
+  <a>画像を投稿：</a><input type="file" name="image" accept="image/*" /><br>
+  <input type="submit" value="投稿" />
+  </form>`);
 
   footer(req, res);
   return;
@@ -103,6 +108,34 @@ const postPage = (req, res, data) => {
 
 // 投稿ページ(POST)
 const postPostPage = (req, res, data) => {
+
+  function extractBoundary(contentType) {
+    console.log(req.headers['content-type']);
+    const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+    return boundaryMatch && (boundaryMatch[1] || boundaryMatch[2]);
+  }
+
+  function parseFormData(body, boundary) {
+    const formData = {};
+    const parts = body.split(`--${boundary}`);
+
+    // 最初と最後のパートは境界線のみのデータなので無視する
+    for (let i = 1; i < parts.length - 1; i++) {
+      const part = parts[i].trim();
+
+      // パートのヘッダーとコンテンツを分割する
+      const [header, content] = part.split('\r\n\r\n');
+      const nameMatch = header.match(/name="([^"]+)"/);
+
+      if (nameMatch) {
+        const fieldName = nameMatch[1];
+        // formData[fieldName] = Buffer.from(content,'binary');
+        formData[fieldName] = content;
+      }
+    }
+    return formData;
+  }
+
   header(req, res);
   //まずはPOSTで送られたデータを受け取る
   //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
@@ -110,23 +143,65 @@ const postPostPage = (req, res, data) => {
   req.on('data', (chunk) => {
     body.push(chunk);
   }).on('end', () => {
-    body = Buffer.concat(body).toString(); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。それをtoString()メソッドで文字列に変換しさらにbodyに格納
-    //パースする。ここでは、queryString.parse()メソッドを使って、文字列などを解析し、オブジェクトとして返します。
     const queryString = require('querystring');
     const parseBody = queryString.parse(body);
+    // console.log('parseされたbodyデータは:',parseBody);
+    // console.log('chunkデータを結合した直後のbody:',body);
+    // console.log(body);
+    body = Buffer.concat(body).toString('binary'); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。
+    // console.log('bodyをbase64で文字列に変換後:',body);
 
-    if (parseBody.kakikomi) {
-      //データベースに投稿を格納
-      insertPost(parseBody.kakikomi, (err) => {
-        if (err) {
-          console.error(err.message);
-          return;
-        }
-      })
-      // posts.push(parseBody.kakikomi); //posts配列に、これまでの投稿を格納＆蓄積
-      res.write('<h2>投稿しました</h2>\n');
-      res.write(`投稿内容: ${decodeURIComponent(parseBody.kakikomi)}`); //投稿をURLデコードしている。URLエンコードされた文字列というのは、%E6%8A こんな感じのやつ。それを普通の文字列に変換する
+    //パースする。ここでは、queryString.parse()メソッドを使って、文字列などを解析し、オブジェクトとして返します。
+    // const queryString = require('querystring');
+    // const parseBody = queryString.parse(body);
+
+    // フォームデータの解析
+    const contentType = req.headers['content-type'];
+    const boundary = extractBoundary(contentType); // Content-Typeヘッダからマルチパートフォームデータの境界(boudary)を抽出する
+
+    if (boundary) {
+      const formData = parseFormData(body, boundary);
+
+      // フォームデータの取得
+      const { kakikomi, image } = formData;
+      // console.log('kakikomiのデータ:',kakikomi);
+      // console.log('imageのデータ:',image);
+      // console.log('imageのデータここまで')
+
+      if (kakikomi) {
+        // テキストの投稿データがある場合の処理
+        insertPostContent(kakikomi, (err) => {
+          if (err) {
+            console.error(err.message);
+            return;
+          }
+        });
+        res.write('<h2>ツイート（文字）投稿しました</h2>\n');
+        res.write(`投稿内容: ${decodeURIComponent(kakikomi)}`);
+      }
+
+      if (image) {
+        // 画像の処理
+        // const fileNameMatch = image.match(/filename="([^"]+)"/);
+        // const fileName = fileNameMatch && fileNameMatch[1];
+
+        // if (fileName) {
+          //ファイル名が取得できた時、画像ファイルがアップロードされていることがわかる
+          insertPostImage(image, (err, imagePathInDB) => {
+            if (err) {
+              console.error(err.message);
+              return;
+            }
+            res.write('<h2>ツイート（画像）投稿しました</h2>\n');
+            res.write(`画像パス: ${imagePathInDB}`);
+          })
+        // } else {
+          // ファイル名が取得できない場合、アップロードで問題が生じた
+          // console.error('Invalid image file...');
+        // }
+      }
     }
+
     footer(req, res);
     return;
   });

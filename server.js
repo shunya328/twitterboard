@@ -80,10 +80,7 @@ const server = http.createServer((req, res) => {
         postLogout(req, res, sessions, sessionID);
         break;
       case '/mypage/edit_profile':
-        // updateEditProfilePageを非同期で実行し、その結果を待つ
-        // const updatedUser = updateEditProfilePage(req, res, sessions[sessionID].userID);
-        // console.log(`updatedUser = ${updateUser}`);
-        // sessions[sessionID] = updatedUser;
+        // updateEditProfilePageをPromiseで実行
         updateEditProfilePage(req, res, sessions[sessionID].userID)
           .then((updateUser) => {
             console.log(`updatedUser = ${updateUser}`);
