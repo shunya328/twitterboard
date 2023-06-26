@@ -2,9 +2,9 @@ const http = require('http');
 const { isDeepStrictEqual } = require('util');
 const path = require('path');
 const fs = require('fs');
-const { signUpPage, signInPage, topPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, readImageFile, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, readImageFile,postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
-const { deletePost, db, updateUser } = require('./databaseUtils');
+const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
 
 const hostname = '127.0.0.1';
 const PORT = 3000;
@@ -96,6 +96,11 @@ const server = http.createServer((req, res) => {
             // エラーハンドリング
             console.error(error);
           });
+        break;
+      case '/mypage/withdrawal':
+        postWithdrawalUser(req, res, sessions, sessionID);
+        console.log('sessionIDは、',sessionID);
+        console.log('sessionsは、',sessions[sessionID].userID);
         break;
       default:
         notFoundPage(req, res);

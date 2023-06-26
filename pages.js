@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, insertPost, deletePost, insertUser, findUser, updateUser } = require('./databaseUtils');
+const { getAllPosts, insertPost, deletePost, insertUser, findUser, updateUser, withdrawalUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
+const { postLogout } = require('./sessions');
 
 // サインアップページ
 const signUpPage = (req, res) => {
@@ -121,7 +122,7 @@ const postPostPage = (req, res, data) => {
 
   function parseFormData(body, boundary) {
     const formData = {};
-    const parts = body.split(`--${boundary}`);
+    const parts = body.split(`--${boundary}`); //仕様で決まっていないかも「--」
 
     // 最初と最後のパートは境界線のみのデータなので無視する
     for (let i = 1; i < parts.length - 1; i++) {
@@ -179,8 +180,8 @@ const postPostPage = (req, res, data) => {
           })
       }
     }
-  return;
-});
+    return;
+  });
 }
 
 // 投稿の詳細画面(GET)
@@ -198,6 +199,19 @@ const myPage = (req, res) => {
 
   res.write('<h2>マイページ</h2>\n');
   res.write('<a href="/mypage/edit_profile">プロフィール編集</a>');
+
+  // 退会フォーム
+  res.write('<h2>退会</h2>\n');
+  res.write('<form action="/mypage/withdrawal" method="post" onsubmit="return confirmWithdrawal()">');
+  res.write('<button type="submit">退会する</button>');
+  res.write('</form>');
+
+  // 退会アラートのJavaScriopt関数
+  res.write('<script>');
+  res.write('function confirmWithdrawal() {');
+  res.write('  return confirm("本当に退会しますか？");');
+  res.write('}');
+  res.write('</script>');
 
   footer(req, res);
 }
@@ -250,11 +264,11 @@ const updateEditProfilePage = (req, res, userID) => {
           email: parseBody.user_email,
           profile: parseBody.user_profile
         };
-  
+
         console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
         res.write('<h2>プロフィールは更新されました</h2>');
-        footer(req, res);
-  
+        // footer(req, res);
+
         // サーバ側のセッション情報を返り値に
         resolve(newProfile); // resolveの引数に渡す
       });
@@ -263,7 +277,7 @@ const updateEditProfilePage = (req, res, userID) => {
 }
 
 // 画像ファイルを読み込む関数
-const readImageFile = (req,res) =>{
+const readImageFile = (req, res) => {
   const fileName = req.url.split('/').pop();
   const imagePath = path.join(__dirname, req.url);
 
@@ -279,6 +293,17 @@ const readImageFile = (req,res) =>{
     res.statusCode = 200;
     res.end(data);
   });
+}
+
+const postWithdrawalUser = (req, res, sessions, sessionID) => {
+  withdrawalUser(sessions[sessionID].userID, (err) => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+    console.log(`userID=${sessions[sessionID].userID}のユーザが削除されました`);
+    postLogout(req, res, sessions, sessionID);
+  })
 }
 
 // その他のページ(404 Not Found)
@@ -300,5 +325,6 @@ module.exports = {
   editProfilePage,
   updateEditProfilePage,
   readImageFile,
+  postWithdrawalUser,
   notFoundPage
 }

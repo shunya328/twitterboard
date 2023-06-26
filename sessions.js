@@ -27,7 +27,7 @@ const postSignInPage = (req, res) => {
         console.error(err.message);
         return;
       }
-      if (user) {
+      if (user && user.is_deleted === 0) {
         console.log(user);
 
         // ログイン成功時にセッションIDを生成
@@ -56,6 +56,7 @@ const postSignInPage = (req, res) => {
       } else {
         beforeLoginHeader(req, res);
         res.write('<h2>サインインに失敗しました</h2>');
+        if(user.is_deleted === 1){ res.write('ユーザは削除されています<br>'); }
         res.write('<a href="/sign_in">再度サインインする</a><br>');
         res.write('<a href="/sign_up">新規登録</a>');
       }

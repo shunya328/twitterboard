@@ -98,6 +98,7 @@ const insertUser = (userName, userEmail, userPassword, callback) => {
       return;
     }
     if (row.count > 0) {
+      console.log('row.count:', row.count);
       const error = new Error('同じユーザ名が既に存在しています');
       callback(error);
       isUserNameDuplicate.value = true;
@@ -120,7 +121,7 @@ const insertUser = (userName, userEmail, userPassword, callback) => {
   });
 
   //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを新規登録
-  if (!isUserNameDuplicate && !isUserEmailDuplicate) {
+  if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
     db.run(`INSERT INTO users (
     name, email, password
   ) VALUES (?, ?, ?)`,
@@ -168,7 +169,7 @@ const updateUser = (userID, userName, userEmail, userPassword, userProfile, call
   });
 
   //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを更新
-  if (!isUserNameDuplicate && !isUserEmailDuplicate) {
+  if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
     //データの書き込み
     if (userName) {
       db.run(`UPDATE users SET name = ? WHERE id = ?`,
@@ -237,6 +238,20 @@ const findUserSignUp = (userName, userEmail, userPassword, callback) => {
     });
 }
 
+// ユーザを退会する（論理削除）
+const withdrawalUser = (id, callback) => {
+  db.run(`UPDATE users SET is_deleted = 1 WHERE id = ?`, [id], (err) => {
+    if (err) {
+      onsole.error(err);
+      callback(err);
+      return;
+    }
+    console.log('withdrawalUserが呼ばれました');
+    callback(null);
+  })
+}
+
+
 module.exports = {
   db,
   getAllPosts,
@@ -245,5 +260,6 @@ module.exports = {
   insertUser,
   updateUser,
   findUserSignIn,
-  findUserSignUp
+  findUserSignUp,
+  withdrawalUser
 }
