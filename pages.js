@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, insertPost, deletePost, insertUser, findUser, updateUser, withdrawalUser } = require('./databaseUtils');
+const { getAllPosts, getAllUsers, insertPost, deletePost, insertUser, findUser, updateUser, withdrawalUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 const { postLogout } = require('./sessions');
 
@@ -96,6 +96,38 @@ const topPage = (req, res) => {
   })
 }
 
+// ユーザ一覧ページ(GET)
+const userIndexPage = (req, res) => {
+  header(req, res);
+
+  getAllUsers((err, users) => {
+    if (err) {
+      console.error(err.message);
+      return;
+    }
+    res.write('<h2>ユーザ一覧ページ</h2>');
+
+    res.write('<ul>');
+    for (let row of users) {
+      res.write('<li>');
+      res.write(`<a href="/users/${row.id}">${row.name}</a>`);
+      if (row.profile_image) {
+        res.write(`<img src="${row.profile_image}" alt="プロフィール画像" />`);
+      }
+      res.write('</li>\n');
+    }
+    res.write('</ul>');
+
+    footer(req, res);
+    return;
+  });
+}
+
+// ユーザ詳細画面
+const showUserPage = (req,res) => {
+
+}
+
 // 投稿ページ(GET)
 const postPage = (req, res, data) => {
   header(req, res);
@@ -112,7 +144,7 @@ const postPage = (req, res, data) => {
 }
 
 // 投稿ページ(POST)
-const postPostPage = (req, res, data) => {
+const postPostPage = (req, res, currentUserID) => {
 
   function extractBoundary(contentType) {
     console.log(req.headers['content-type']);
@@ -165,7 +197,7 @@ const postPostPage = (req, res, data) => {
       const kakikomiToString = Buffer.from(kakikomi, 'binary').toString('utf-8') //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
 
       if (kakikomiToString || image) {
-        insertPost(kakikomiToString, image)
+        insertPost(kakikomiToString, image, currentUserID)
           .then((imagePath) => {
             res.write('<h2>ツイート（文字）投稿しました</h2>\n');
             res.write(`投稿内容: ${decodeURIComponent(kakikomiToString)}`);
@@ -318,6 +350,7 @@ module.exports = {
   signUpPage,
   signInPage,
   topPage,
+  userIndexPage,
   postPage,
   postPostPage,
   showPost,

@@ -2,7 +2,7 @@ const http = require('http');
 const { isDeepStrictEqual } = require('util');
 const path = require('path');
 const fs = require('fs');
-const { signUpPage, signInPage, topPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, readImageFile,postWithdrawalUser, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, userIndexPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
 
@@ -51,6 +51,11 @@ const server = http.createServer((req, res) => {
       case '/sign_in':
         signInPage(req, res);
         break;
+      case '/users':
+        userIndexPage(req, res);
+        break;
+      case `/users/${id}`:
+        break;
       case '/post':
         postPage(req, res); //投稿用ページの関数を呼んでいる
         break;
@@ -75,7 +80,7 @@ const server = http.createServer((req, res) => {
   } else if (req.method === 'POST') {
     switch (req.url) {
       case '/post':
-        postPostPage(req, res);
+        postPostPage(req, res, sessions[sessionID].userID);
         break;
       case '/sign_up':
         postSignUpPage(req, res);
@@ -99,8 +104,8 @@ const server = http.createServer((req, res) => {
         break;
       case '/mypage/withdrawal':
         postWithdrawalUser(req, res, sessions, sessionID);
-        console.log('sessionIDは、',sessionID);
-        console.log('sessionsは、',sessions[sessionID].userID);
+        console.log('sessionIDは、', sessionID);
+        console.log('sessionsは、', sessions[sessionID].userID);
         break;
       default:
         notFoundPage(req, res);

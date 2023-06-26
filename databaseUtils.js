@@ -10,12 +10,14 @@ const { generateSessionID } = require('./generateSessionID'); //ランダムな�
 //postsテーブルの作成
 db.run(`CREATE TABLE IF NOT EXISTS posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT, 
+  user_id INTEGER NOT NULL,
   content TEXT,
   is_deleted INTEGER DEFAULT 0,
   reply_to INTEGER,
   image TEXT,
   date DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (reply_to) REFERENCES posts(id)
+  FOREIGN KEY (reply_to) REFERENCES posts(id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 
 //usersテーブルの作成
@@ -29,7 +31,18 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
   is_deleted INTEGER DEFAULT 0
 )`)
 
-//データベースから全データを取得する関数
+//relationshipsテーブルの作成
+db.run(`CREATE TABLE IF NOT EXISTS relationships (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  follower_id INTEGER NOT NULL,
+  followed_id INTEGER NOT NULL,
+  FOREIGN KEY (follower_id) REFERENCES users(id),
+  FOREIGN KEY (followed_id) REFERENCES users(id),
+  UNIQUE (follower_id, followed_id)
+)`);
+
+
+//データベースから全投稿データを取得する関数
 const getAllPosts = (callback) => {
   db.all(`SELECT * FROM posts`, [], (err, rows) => {
     if (err) {
@@ -40,8 +53,19 @@ const getAllPosts = (callback) => {
   });
 }
 
+//データベースから前ユーザデータを取得する関数
+const getAllUsers = (callback) => {
+  db.all(`SELECT * FROM users WHERE is_deleted = 0`, [], (err, rows) => {
+    if (err) {
+      callback(err, null);
+      return;
+    }
+    callback(null, rows);
+  });
+}
+
 //データベースに文字＆画像を同時に投稿する関数
-const insertPost = (content, image) => {
+const insertPost = (content, image, currentUserID) => {
   return new Promise((resolve, reject) => {
     if (image) {
       //　画像の前準備
@@ -53,7 +77,7 @@ const insertPost = (content, image) => {
       const imagePathInDB = imagePath.replace(/.*\/public\//, '/public/');
 
       // データベースに投稿の情報を格納
-      db.run(`INSERT INTO posts (content, image) VALUES (?, ?)`, [content, imagePathInDB], (err) => {
+      db.run(`INSERT INTO posts (user_id, content, image) VALUES (?,?, ?)`, [currentUserID, content, imagePathInDB], (err) => {
         if (err) {
           reject(err);
         } else {
@@ -64,7 +88,7 @@ const insertPost = (content, image) => {
       const imagePathInDB = null;
 
       // データベースに投稿の情報を格納
-      db.run(`INSERT INTO posts (content, image) VALUES (?, ?)`, [content, imagePathInDB], (err) => {
+      db.run(`INSERT INTO posts (user_id, content, image) VALUES (?, ?, ?)`, [currentUserID, content, imagePathInDB], (err) => {
         if (err) {
           reject(err);
         } else {
@@ -255,6 +279,7 @@ const withdrawalUser = (id, callback) => {
 module.exports = {
   db,
   getAllPosts,
+  getAllUsers,
   insertPost,
   deletePost,
   insertUser,
