@@ -39,7 +39,7 @@ const signInPage = (req, res) => {
 }
 
 // トップページ
-const topPage = (req, res) => {
+const topPage = (req, res, currentUserID) => {
   header(req, res);
 
   //データベースから全データを取得
@@ -54,11 +54,14 @@ const topPage = (req, res) => {
     for (let row of posts) {
       res.write('<li>');
       if (row.is_deleted === 0) {
+        res.write(`ユーザ名：<a href="/users/${row.user_id}">${row.user_name}</a><br>`);
         res.write(`<a href="/post/${row.id}">${row.content}</a>`);
         if (row.image) {
           res.write(`<img src="${row.image}" alt="投稿画像" />`);
         }
-        res.write('<button class="delete-btn-' + row.id + '">削除</button>');
+        if (row.user_id === currentUserID) {
+          res.write('<button class="delete-btn-' + row.id + '">削除</button>');
+        }
       } else {
         res.write('投稿は削除されました')
       }
@@ -97,10 +100,10 @@ const topPage = (req, res) => {
 }
 
 // ユーザ一覧ページ(GET)
-const userIndexPage = (req, res) => {
+const userIndexPage = (req, res, currentUserID) => {
   header(req, res);
 
-  getAllUsers((err, users) => {
+  getAllUsers(currentUserID, (err, users) => {
     if (err) {
       console.error(err.message);
       return;
@@ -109,12 +112,20 @@ const userIndexPage = (req, res) => {
 
     res.write('<ul>');
     for (let row of users) {
-      res.write('<li>');
-      res.write(`<a href="/users/${row.id}">${row.name}</a>`);
-      if (row.profile_image) {
-        res.write(`<img src="${row.profile_image}" alt="プロフィール画像" />`);
+      if (row.id !== currentUserID) {
+        res.write('<li>');
+        res.write(`<a href="/users/${row.id}">${row.name}</a>`);
+        if (row.profile_image) { res.write(`<img src="${row.profile_image}" alt="プロフィール画像" />`); }
+        // フォローするボタンの追加
+        if (row.is_following === 1) {
+          res.write('<span>フォロー済み</span>');
+        } else {
+          res.write(`<form action="/following/${row.id}" method="post">`);
+          res.write('<button type="submit">フォローする</button>');
+          res.write('</form>');
+        }
+        res.write('</li>\n');
       }
-      res.write('</li>\n');
     }
     res.write('</ul>');
 
@@ -124,8 +135,12 @@ const userIndexPage = (req, res) => {
 }
 
 // ユーザ詳細画面
-const showUserPage = (req,res) => {
+const showUserPage = (req, res, userID) => {
+  header(req, res);
 
+  res.write(`id:${userID}のユーザの詳細画面です`);
+
+  footer(req, res);
 }
 
 // 投稿ページ(GET)
@@ -248,7 +263,7 @@ const myPage = (req, res) => {
   footer(req, res);
 }
 
-// プロフィール編集ページ
+// プロフィール編集ページ（GET）
 const editProfilePage = (req, res) => {
   header(req, res);
 
@@ -327,6 +342,7 @@ const readImageFile = (req, res) => {
   });
 }
 
+// （POST）ユーザを論理削除する関数
 const postWithdrawalUser = (req, res, sessions, sessionID) => {
   withdrawalUser(sessions[sessionID].userID, (err) => {
     if (err) {
@@ -351,6 +367,7 @@ module.exports = {
   signInPage,
   topPage,
   userIndexPage,
+  showUserPage,
   postPage,
   postPostPage,
   showPost,

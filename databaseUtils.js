@@ -42,9 +42,12 @@ db.run(`CREATE TABLE IF NOT EXISTS relationships (
 )`);
 
 
-//データベースから全投稿データを取得する関数
+//データベースから全投稿データを取得する関数（ついでにユーザデータも引っ張っています）
 const getAllPosts = (callback) => {
-  db.all(`SELECT * FROM posts`, [], (err, rows) => {
+  db.all(`SELECT posts.id, posts.content, posts.is_deleted, posts.reply_to, posts.image, posts.date,
+  users.id AS user_id, users.name AS user_name, users.email, users.profile, users.profile_image
+   FROM posts
+   INNER JOIN users ON posts.user_id = users.id`, [], (err, rows) => {
     if (err) {
       callback(err, null);
       return;
@@ -53,9 +56,13 @@ const getAllPosts = (callback) => {
   });
 }
 
-//データベースから前ユーザデータを取得する関数
-const getAllUsers = (callback) => {
-  db.all(`SELECT * FROM users WHERE is_deleted = 0`, [], (err, rows) => {
+//データベースから全ユーザデータを取得する関数
+const getAllUsers = (currentUserID, callback) => {
+  db.all(`SELECT users.*,
+  CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
+FROM users
+LEFT JOIN relationships ON relationships.follower_id = ? AND relationships.followed_id = users.id
+WHERE users.is_deleted = 0`, [currentUserID], (err, rows) => {
     if (err) {
       callback(err, null);
       return;

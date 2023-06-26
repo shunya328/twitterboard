@@ -2,9 +2,10 @@ const http = require('http');
 const { isDeepStrictEqual } = require('util');
 const path = require('path');
 const fs = require('fs');
-const { signUpPage, signInPage, topPage, userIndexPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
+const { followingUser } = require('./followUtils');
 
 const hostname = '127.0.0.1';
 const PORT = 3000;
@@ -43,7 +44,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET') {
     switch (req.url) { //リクエストされたurlが引数に入る
       case '/':
-        topPage(req, res); //トップページ用の関数を呼んでいる
+        topPage(req, res, sessions[sessionID].userID); //トップページ用の関数を呼んでいる
         break;
       case '/sign_up':
         signUpPage(req, res);
@@ -52,9 +53,10 @@ const server = http.createServer((req, res) => {
         signInPage(req, res);
         break;
       case '/users':
-        userIndexPage(req, res);
+        userIndexPage(req, res, sessions[sessionID].userID);
         break;
       case `/users/${id}`:
+        showUserPage(req, res, id);
         break;
       case '/post':
         postPage(req, res); //投稿用ページの関数を呼んでいる
@@ -106,6 +108,9 @@ const server = http.createServer((req, res) => {
         postWithdrawalUser(req, res, sessions, sessionID);
         console.log('sessionIDは、', sessionID);
         console.log('sessionsは、', sessions[sessionID].userID);
+        break;
+      case `/following/${id}`:
+        followingUser(req,res,sessions[sessionID].userID,id);
         break;
       default:
         notFoundPage(req, res);

@@ -12,7 +12,7 @@ const header = (req, res) => {
 // フッタ
 const footer = (req, res) => {
   // 全ページ共通HTMLフッター
-  res.write('<footer style="position:absolute;bottom:0;width:100%;border:1px solid #888;text-align:center;padding:20px;">フッター</footer>\n'); // 共通のフッター
+  res.write('<footer style="bottom:0;width:100%;border:1px solid #888;text-align:center;padding:20px;">フッター</footer>\n'); // 共通のフッター
   res.end('</body></html>'); // res.endでもコンテンツを返せる
 }
 
