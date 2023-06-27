@@ -76,7 +76,9 @@ const server = http.createServer((req, res) => {
         break;
       default:
         // 画像ファイルを読み込む処理
-        if (req.url.startsWith('/public/images/')) {
+        if (req.url.startsWith('/public/post_images/')) {
+          readImageFile(req, res);
+        } else if (req.url.startsWith('/public/user_images/')) {
           readImageFile(req, res);
         } else {
           notFoundPage(req, res);

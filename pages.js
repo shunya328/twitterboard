@@ -58,6 +58,7 @@ const topPage = (req, res, currentUserID) => {
         res.write(`ユーザ名：<a href="/users/${row.user_id}">${row.user_name}</a><br>`);
         res.write(`<a href="/post/${row.id}">${row.content}</a>`);
         if (row.image) {
+          console.log('row.image:', row.image);
           res.write(`<img src="${row.image}" alt="投稿画像" />`);
         }
         if (row.user_id === currentUserID) {
@@ -165,6 +166,7 @@ const postPage = (req, res, data) => {
 // 投稿ページ(POST)
 const postPostPage = (req, res, currentUserID) => {
 
+  //マルチパートフォームデータを処理するためのヘルパー関数たちを宣言
   function extractBoundary(contentType) {
     console.log(req.headers['content-type']);
     const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
@@ -249,7 +251,11 @@ const myPage = (req, res) => {
   header(req, res);
 
   res.write('<h2>マイページ</h2>\n');
-  res.write('<a href="/mypage/edit_profile">プロフィール編集</a>');
+  res.write('<h3><a href="/mypage/edit_profile">プロフィール編集</a></h3><br>');
+
+  res.write(`<form method="post" action="/logout">
+  <button type="submit">ログアウト</button>
+</form>`);
 
   // 退会フォーム
   res.write('<h2>退会</h2>\n');
@@ -272,11 +278,12 @@ const editProfilePage = (req, res) => {
   header(req, res);
 
   res.write('<h2>プロフィール編集ページ</h2>\n');
-  res.write('<form action="/mypage/edit_profile" method="post">')
+  res.write('<form action="/mypage/edit_profile" method="post" enctype="multipart/form-data">')
   res.write('<input type="text" name="user_name" placeholder="user_name"><br>');
   res.write('<input type="email" name="user_email" placeholder="e-mail"><br>');
   res.write('<input type="password" name="user_password" placeholder="password"><br>');
   res.write('<textarea type="text" name="user_profile" placeholder="profile"></textarea><br>');
+  res.write('<a>画像を投稿：</a><input type="file" name="user_image" accept="image/*" /><br>')
   res.write('<input type="submit" value="編集する">');
   res.write('</form>');
 
@@ -287,6 +294,34 @@ const editProfilePage = (req, res) => {
 const updateEditProfilePage = (req, res, userID) => {
   return new Promise((resolve, reject) => {
 
+    //マルチパートフォームデータを処理するためのヘルパー関数たちを宣言
+    function extractBoundary(contentType) {
+      console.log(req.headers['content-type']);
+      const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+      return boundaryMatch && (boundaryMatch[1] || boundaryMatch[2]);
+    }
+
+    function parseFormData(body, boundary) {
+      const formData = {};
+      const parts = body.split(`--${boundary}`); //仕様で決まっていないかも「--」
+
+      // 最初と最後のパートは境界線のみのデータなので無視する
+      for (let i = 1; i < parts.length - 1; i++) {
+        const part = parts[i].trim();
+
+        // パートのヘッダーとコンテンツを分割する
+        const [header, content] = part.split('\r\n\r\n');
+        const nameMatch = header.match(/name="([^"]+)"/);
+
+        if (nameMatch) {
+          const fieldName = nameMatch[1];
+          // formData[fieldName] = Buffer.from(content, 'binary').toString('utf-8');
+          formData[fieldName] = content;
+        }
+      }
+      return formData;
+    }
+
     header(req, res);
     //まずはPOSTで送られたデータを受け取る
     //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
@@ -294,35 +329,52 @@ const updateEditProfilePage = (req, res, userID) => {
     req.on('data', (chunk) => {
       body.push(chunk);
     }).on('end', () => {
-      body = Buffer.concat(body).toString(); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。それをtoString()メソッドで文字列に変換しさらにbodyに格納
+      // body = Buffer.concat(body).toString(); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。それをtoString()メソッドで文字列に変換しさらにbodyに格納
       //パースする。ここでは、queryString.parse()メソッドを使って、文字列などを解析し、オブジェクトとして返します。
       const queryString = require('querystring');
       const parseBody = queryString.parse(body);
+      body = Buffer.concat(body).toString('binary'); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。
 
-      // 現在ログインしているユーザの情報をアップデート
-      updateUser(userID, parseBody.user_name, parseBody.user_email, parseBody.user_password, parseBody.user_profile, (err) => {
-        if (err) {
-          console.error(err.message);
-          res.write('<h2>プロフィールの更新に失敗しました</h2><br>');
-          res.write(`<h4>${err.message}</h4>`);
-          reject(err); // エラー時にreject
-          footer(req, res);
-          return;
-        }
-        const newProfile = {
-          userID: userID,
-          name: parseBody.user_name,
-          email: parseBody.user_email,
-          profile: parseBody.user_profile
-        };
+      // フォームデータの解析
+      const contentType = req.headers['content-type'];
+      const boundary = extractBoundary(contentType); // Content-Typeヘッダからマルチパートフォームデータの境界(boudary)を抽出する
 
-        console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
-        res.write('<h2>プロフィールは更新されました</h2>');
-        // footer(req, res);
+      if (boundary) {
+        const formData = parseFormData(body, boundary);
 
-        // サーバ側のセッション情報を返り値に
-        resolve(newProfile); // resolveの引数に渡す
-      });
+        // フォームデータの取得
+        const { user_name, user_email, user_password, user_profile, user_image } = formData;
+        console.log('user_name:', user_name);
+        const userNameToString = (user_name ? Buffer.from(user_name, 'binary').toString('utf-8') : null); //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
+        const userEmailToString = (user_email ? Buffer.from(user_email, 'binary').toString('utf-8') : null); //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
+        const userPasswordToString = (user_password ? Buffer.from(user_password, 'binary').toString('utf-8') : null); //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
+        const userProfileToString = (user_profile ? Buffer.from(user_profile, 'binary').toString('utf-8') : null); //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
+
+        // 現在ログインしているユーザの情報をアップデート
+        updateUser(userID, user_name, user_email, user_password, user_profile, user_image, (err) => {
+          if (err) {
+            console.error(err.message);
+            res.write('<h2>プロフィールの更新に失敗しました</h2><br>');
+            res.write(`<h4>${err.message}</h4>`);
+            reject(err); // エラー時にreject
+            footer(req, res);
+            return;
+          }
+          const newProfile = {
+            userID: userID,
+            name: user_name,
+            email: user_email,
+            profile: user_profile
+          };
+
+          console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
+          res.write('<h2>プロフィールは更新されました</h2>');
+          // footer(req, res);
+
+          // サーバ側のセッション情報を返り値に
+          resolve(newProfile); // resolveの引数に渡す
+        });
+      }
     })
   });
 }
@@ -340,7 +392,7 @@ const followingUserPage = (req, res, currentUserID) => {
     res.write(`<h1>フォロー一覧ページ</h1>`);
 
     res.write('<ul>');
-    
+
     for (let user of users) {
       res.write('<li>');
       res.write(`<a href="/users/${user.id}">${user.name}</a>`);

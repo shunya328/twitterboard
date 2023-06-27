@@ -78,10 +78,10 @@ const insertPost = (content, image, currentUserID) => {
     if (image) {
       //　画像の前準備
       const fileName = generateSessionID() + '.jpg'; //ランダムな文字列を画像の名前にする
-      fs.mkdirSync(path.join(__dirname, 'public', 'images'), { recursive: true }); //保存先ディレクトリがない場合、作る
-      const imagePath = path.join(__dirname, 'public', 'images', fileName); //画像の保存先
+      fs.mkdirSync(path.join(__dirname, 'public', 'post_images'), { recursive: true }); //保存先ディレクトリがない場合、作る
+      const imagePath = path.join(__dirname, 'public', 'post_images', fileName); //画像の保存先
       fs.writeFileSync(imagePath, image, 'binary') //画像を保存する
-      // "/public/images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
+      // "/public/post_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
       const imagePathInDB = imagePath.replace(/.*\/public\//, '/public/');
 
       // データベースに投稿の情報を格納
@@ -168,7 +168,7 @@ const insertUser = (userName, userEmail, userPassword, callback) => {
 }
 
 //データベース上のユーザ情報を変更する関数
-const updateUser = (userID, userName, userEmail, userPassword, userProfile, callback) => {
+const updateUser = (userID, userName, userEmail, userPassword, userProfile, userImage, callback) => {
   const isUserNameDuplicate = { value: false };
   const isUserEmailDuplicate = { value: false };
 
@@ -242,6 +242,24 @@ const updateUser = (userID, userName, userEmail, userPassword, userProfile, call
           }
           callback(null);
         });
+    }
+    if (userImage) {
+      //　画像の前準備
+      const fileName = generateSessionID() + '.jpg'; //ランダムな文字列を画像の名前にする
+      fs.mkdirSync(path.join(__dirname, 'public', 'user_images'), { recursive: true }); //保存先ディレクトリがない場合、作る
+      const imagePath = path.join(__dirname, 'public', 'user_images', fileName); //画像の保存先
+      fs.writeFileSync(imagePath, userImage, 'binary') //画像を保存する
+      // "/public/user_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
+      const imagePathInDB = imagePath.replace(/.*\/public\//, '/public/');
+
+      db.run(`UPDATE users SET profile_image = ? WHERE id = ?`,
+      [imagePathInDB, userID], (err) => {
+        if (err) {
+          callback(err);
+          return;
+        }
+        callback(null);
+      });
     }
   }
 }
