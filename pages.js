@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, getAllUsers, insertPost, getOnePost, deletePost, insertUser, findUser, updateUser, withdrawalUser } = require('./databaseUtils');
+const { getAllPosts, getAllUsers, insertPost, getOnePost, getReplyPost, deletePost, insertUser, findUser, updateUser, withdrawalUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 const { postLogout } = require('./sessions');
 const { getFollowingUser, getFollowerUser, isFollowing } = require('./followUtils');
@@ -237,7 +237,7 @@ const postPostPage = (req, res, currentUserID) => {
 // 投稿の詳細画面(GET)
 const showPost = (req, res, postID) => {
   // id=postIDのレコードをとってくる！
-  getOnePost(req,res,postID,(err,row) => {
+  getOnePost(req, res, postID, (err, row) => {
     if (err) {
       // エラーが発生した場合の処理
       res.statusCode = err.statusCode || 500;
@@ -257,18 +257,28 @@ const showPost = (req, res, postID) => {
       res.write('投稿は削除されています');
     }
 
-
+    // この投稿に対するリプライをする欄です
     res.write(`<form action="/post" method="post" enctype="multipart/form-data">
     <textarea name="kakikomi" style="width:80%;height:100px"></textarea><br>
     <a>画像を投稿：</a><input type="file" name="image" accept="image/*" /><br>
     <input type="hidden" name="reply_to" value="${postID}" />
     <input type="submit" value="投稿" />
     </form>`)
-  
-    footer(req, res);
+
+    // 投稿に基づくリプライを取得
+    getReplyPost(req, res, postID, (err,rows)=>{
+      if (err) {
+        // エラーが発生した場合の処理
+        res.statusCode = err.statusCode || 500;
+        res.end(err.message);
+        return;
+      }
+
+      // ここにrowsの数だけforループしてそれぞれの投稿を表示するコードを実装！！
+
+      footer(req, res);
+    })
   });
-
-
 }
 
 // マイページ

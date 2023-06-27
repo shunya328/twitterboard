@@ -131,6 +131,23 @@ const getOnePost = (req, res, postID, callback) => {
     });
 }
 
+// データベース上の特定の投稿に紐づくリプライをすべて取得する関数
+const getReplyPost = (req, res, postID, callback) => {
+  db.all(`SELECT posts.*, users.name
+  FROM posts
+  INNER JOIN users ON posts.user_id = users.id
+  WHERE posts.reply_to = ?
+  `,
+    [postID], (err, rows) => {
+      if (err) {
+        console.error(err.message);
+        callback(err, null);
+        return;
+      }
+      callback(null, rows);
+    });
+}
+
 //データベースの特定の投稿を削除する関数(論理削除)
 const deletePost = (id, callback) => {
   db.run(`UPDATE posts SET is_deleted = 1 WHERE id = ?`, [id], (err) => {
@@ -325,13 +342,13 @@ const withdrawalUser = (id, callback) => {
   })
 }
 
-
 module.exports = {
   db,
   getAllPosts,
   getAllUsers,
   insertPost,
   getOnePost,
+  getReplyPost,
   deletePost,
   insertUser,
   updateUser,
