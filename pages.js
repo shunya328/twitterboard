@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, getAllUsers, insertPost, deletePost, insertUser, findUser, updateUser, withdrawalUser } = require('./databaseUtils');
+const { getAllPosts, getAllUsers, insertPost, getOnePost, deletePost, insertUser, findUser, updateUser, withdrawalUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 const { postLogout } = require('./sessions');
 const { getFollowingUser, getFollowerUser, isFollowing } = require('./followUtils');
@@ -55,15 +55,11 @@ const topPage = (req, res, currentUserID) => {
     for (let row of posts) {
       res.write('<li>');
       if (row.is_deleted === 0) {
-        res.write(`ユーザ名：<a href="/users/${row.user_id}">${row.user_name}</a><br>`);
+        res.write(`ユーザ名：<a href="/users/${row.user_id}">${row.name}</a><br>`);
         res.write(`<a href="/post/${row.id}">${row.content}</a>`);
-        if (row.image) {
-          console.log('row.image:', row.image);
-          res.write(`<img src="${row.image}" alt="投稿画像" style="width:400px; height:auto" />`);
-        }
-        if (row.user_id === currentUserID) {
-          res.write('<button class="delete-btn-' + row.id + '">削除</button>');
-        }
+        if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+        res.write(`${row.date}<br>`);
+        if (row.user_id === currentUserID) { res.write('<button class="delete-btn-' + row.id + '">削除</button>'); }
       } else {
         res.write('投稿は削除されました')
       }
@@ -156,6 +152,7 @@ const postPage = (req, res, data) => {
   res.write(`<form action="/post" method="post" enctype="multipart/form-data">
   <textarea name="kakikomi" style="width:80%;height:100px"></textarea><br>
   <a>画像を投稿：</a><input type="file" name="image" accept="image/*" /><br>
+  <input type="hidden" name="reply_to" value=null />
   <input type="submit" value="投稿" />
   </form>`);
 
@@ -214,11 +211,11 @@ const postPostPage = (req, res, currentUserID) => {
       const formData = parseFormData(body, boundary);
 
       // フォームデータの取得
-      const { kakikomi, image } = formData;
+      const { kakikomi, image, reply_to } = formData;
       const kakikomiToString = Buffer.from(kakikomi, 'binary').toString('utf-8') //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
 
       if (kakikomiToString || image) {
-        insertPost(kakikomiToString, image, currentUserID)
+        insertPost(kakikomiToString, image, reply_to, currentUserID)
           .then((imagePath) => {
             res.write('<h2>ツイート（文字）投稿しました</h2>\n');
             res.write(`投稿内容: ${decodeURIComponent(kakikomiToString)}`);
@@ -238,12 +235,40 @@ const postPostPage = (req, res, currentUserID) => {
 }
 
 // 投稿の詳細画面(GET)
-const showPost = (req, res, id) => {
-  header(req, res);
+const showPost = (req, res, postID) => {
+  // id=postIDのレコードをとってくる！
+  getOnePost(req,res,postID,(err,row) => {
+    if (err) {
+      // エラーが発生した場合の処理
+      res.statusCode = err.statusCode || 500;
+      res.end(err.message);
+      return;
+    }
+    header(req, res);
 
-  res.write(`id=${id}番の投稿についての詳細画面です`);
+    res.write(`id=${postID}番の投稿についての詳細画面です`);
+    // 特定の投稿をここに表示
+    if (row.is_deleted === 0) {
+      res.write(`ユーザ名：<a href="/users/${row.user_id}">${row.name}</a><br>`);
+      res.write(`<a href="/post/${row.id}">${row.content}</a>`);
+      if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+      res.write(`${row.date}<br>`);
+    } else {
+      res.write('投稿は削除されています');
+    }
 
-  footer(req, res);
+
+    res.write(`<form action="/post" method="post" enctype="multipart/form-data">
+    <textarea name="kakikomi" style="width:80%;height:100px"></textarea><br>
+    <a>画像を投稿：</a><input type="file" name="image" accept="image/*" /><br>
+    <input type="hidden" name="reply_to" value="${postID}" />
+    <input type="submit" value="投稿" />
+    </form>`)
+  
+    footer(req, res);
+  });
+
+
 }
 
 // マイページ

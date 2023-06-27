@@ -45,7 +45,7 @@ db.run(`CREATE TABLE IF NOT EXISTS relationships (
 //データベースから全投稿データを取得する関数（ついでにユーザデータも引っ張っています）
 const getAllPosts = (callback) => {
   db.all(`SELECT posts.id, posts.content, posts.is_deleted, posts.reply_to, posts.image, posts.date,
-  users.id AS user_id, users.name AS user_name, users.email, users.profile, users.profile_image
+  users.id AS user_id, users.name, users.email, users.profile, users.profile_image
    FROM posts
    INNER JOIN users ON posts.user_id = users.id`, [], (err, rows) => {
     if (err) {
@@ -73,7 +73,7 @@ WHERE users.is_deleted = 0`, [currentUserID], (err, rows) => {
 }
 
 //データベースに文字＆画像を同時に投稿する関数
-const insertPost = (content, image, currentUserID) => {
+const insertPost = (content, image, reply_to, currentUserID) => {
   return new Promise((resolve, reject) => {
     if (image) {
       //　画像の前準備
@@ -85,7 +85,7 @@ const insertPost = (content, image, currentUserID) => {
       const imagePathInDB = imagePath.replace(/.*\/public\//, '/public/');
 
       // データベースに投稿の情報を格納
-      db.run(`INSERT INTO posts (user_id, content, image) VALUES (?,?, ?)`, [currentUserID, content, imagePathInDB], (err) => {
+      db.run(`INSERT INTO posts (user_id, content, image, reply_to) VALUES (?, ?, ?, ?)`, [currentUserID, content, imagePathInDB, reply_to], (err) => {
         if (err) {
           reject(err);
         } else {
@@ -96,7 +96,7 @@ const insertPost = (content, image, currentUserID) => {
       const imagePathInDB = null;
 
       // データベースに投稿の情報を格納
-      db.run(`INSERT INTO posts (user_id, content, image) VALUES (?, ?, ?)`, [currentUserID, content, imagePathInDB], (err) => {
+      db.run(`INSERT INTO posts (user_id, content, image, reply_to) VALUES (?, ?, ?, ?)`, [currentUserID, content, imagePathInDB, reply_to], (err) => {
         if (err) {
           reject(err);
         } else {
@@ -105,6 +105,30 @@ const insertPost = (content, image, currentUserID) => {
       });
     }
   })
+}
+
+// データベース上の特定の投稿を取ってくる関数
+const getOnePost = (req, res, postID, callback) => {
+  db.get(`SELECT posts.*, users.name
+  FROM posts
+  INNER JOIN users ON posts.user_id = users.id
+  WHERE posts.id = ?`,
+    [postID], (err, row) => {
+      if (err) {
+        console.error(err.message);
+        callback(err, null);
+        return;
+      }
+
+      if (!row) {
+        const error = new Error('お探しの投稿は見つかりませんでした');
+        error.statusCode = 404;
+        callback(error, null);
+        return;
+      }
+
+      callback(null, row);
+    });
 }
 
 //データベースの特定の投稿を削除する関数(論理削除)
@@ -253,13 +277,13 @@ const updateUser = (userID, userName, userEmail, userPassword, userProfile, user
       const imagePathInDB = imagePath.replace(/.*\/public\//, '/public/');
 
       db.run(`UPDATE users SET profile_image = ? WHERE id = ?`,
-      [imagePathInDB, userID], (err) => {
-        if (err) {
-          callback(err);
-          return;
-        }
-        callback(null);
-      });
+        [imagePathInDB, userID], (err) => {
+          if (err) {
+            callback(err);
+            return;
+          }
+          callback(null);
+        });
     }
   }
 }
@@ -307,6 +331,7 @@ module.exports = {
   getAllPosts,
   getAllUsers,
   insertPost,
+  getOnePost,
   deletePost,
   insertUser,
   updateUser,
