@@ -59,7 +59,7 @@ const topPage = (req, res, currentUserID) => {
         res.write(`<a href="/post/${row.id}">${row.content}</a>`);
         if (row.image) {
           console.log('row.image:', row.image);
-          res.write(`<img src="${row.image}" alt="投稿画像" />`);
+          res.write(`<img src="${row.image}" alt="投稿画像" style="width:400px; height:auto" />`);
         }
         if (row.user_id === currentUserID) {
           res.write('<button class="delete-btn-' + row.id + '">削除</button>');
@@ -117,7 +117,7 @@ const userIndexPage = (req, res, currentUserID) => {
       if (row.id !== currentUserID) {
         res.write('<li>');
         res.write(`<a href="/users/${row.id}">${row.name}</a>`);
-        if (row.profile_image) { res.write(`<img src="${row.profile_image}" alt="プロフィール画像" />`); }
+        if (row.profile_image) { res.write(`<img src="${row.profile_image}" alt="プロフィール画像" style="width:80px; height:auto" />`); }
         // フォローするボタンの追加
         if (row.is_following === 1) {
           res.write('<span>フォロー済み</span>');
@@ -139,7 +139,7 @@ const userIndexPage = (req, res, currentUserID) => {
   });
 }
 
-// ユーザ詳細画面
+// ユーザ詳細画面。ここでそのユーザの投稿が見れる
 const showUserPage = (req, res, userID) => {
   header(req, res);
 
@@ -346,9 +346,9 @@ const updateEditProfilePage = (req, res, userID) => {
         const { user_name, user_email, user_password, user_profile, user_image } = formData;
         console.log('user_name:', user_name);
         const userNameToString = (user_name ? Buffer.from(user_name, 'binary').toString('utf-8') : null); //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
-        const userEmailToString = (user_email ? Buffer.from(user_email, 'binary').toString('utf-8') : null); //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
-        const userPasswordToString = (user_password ? Buffer.from(user_password, 'binary').toString('utf-8') : null); //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
-        const userProfileToString = (user_profile ? Buffer.from(user_profile, 'binary').toString('utf-8') : null); //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
+        const userEmailToString = (user_email ? Buffer.from(user_email, 'binary').toString('utf-8') : null);
+        const userPasswordToString = (user_password ? Buffer.from(user_password, 'binary').toString('utf-8') : null);
+        const userProfileToString = (user_profile ? Buffer.from(user_profile, 'binary').toString('utf-8') : null);
 
         // 現在ログインしているユーザの情報をアップデート
         updateUser(userID, user_name, user_email, user_password, user_profile, user_image, (err) => {
@@ -464,8 +464,6 @@ const followerUserPage = (req, res, currentUserID) => {
 
   })
 }
-
-
 
 // 画像ファイルを読み込む関数
 const readImageFile = (req, res) => {
