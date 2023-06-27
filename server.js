@@ -5,7 +5,7 @@ const fs = require('fs');
 const { signUpPage, signInPage, topPage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
-const { followingUser } = require('./followUtils');
+const { followingUser,unfollowUser } = require('./followUtils');
 
 const hostname = '127.0.0.1';
 const PORT = 3000;
@@ -110,7 +110,10 @@ const server = http.createServer((req, res) => {
         console.log('sessionsは、', sessions[sessionID].userID);
         break;
       case `/following/${id}`:
-        followingUser(req,res,sessions[sessionID].userID,id);
+        followingUser(req, res, sessions[sessionID].userID, id);
+        break;
+      case `/unfollow/${id}`:
+        unfollowUser(req,res,sessions[sessionID].userID, id);
         break;
       default:
         notFoundPage(req, res);

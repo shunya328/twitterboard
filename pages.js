@@ -119,6 +119,9 @@ const userIndexPage = (req, res, currentUserID) => {
         // フォローするボタンの追加
         if (row.is_following === 1) {
           res.write('<span>フォロー済み</span>');
+          res.write(`<form action="/unfollow/${row.id}" method="post">`);
+          res.write('<button type="submit">フォロー解除</button>');
+          res.write('</form>');
         } else {
           res.write(`<form action="/following/${row.id}" method="post">`);
           res.write('<button type="submit">フォローする</button>');

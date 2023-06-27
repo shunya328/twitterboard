@@ -56,7 +56,7 @@ const getAllPosts = (callback) => {
   });
 }
 
-//データベースから全ユーザデータを取得する関数
+//データベースから全ユーザデータを取得する関数。ログイン中のユーザがフォローしているユーザかどうかを判定
 const getAllUsers = (currentUserID, callback) => {
   db.all(`SELECT users.*,
   CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
