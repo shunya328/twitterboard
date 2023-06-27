@@ -2,7 +2,7 @@ const http = require('http');
 const { isDeepStrictEqual } = require('util');
 const path = require('path');
 const fs = require('fs');
-const { signUpPage, signInPage, topPage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
 const { followingUser, unfollowUser } = require('./followUtils');
@@ -71,7 +71,8 @@ const server = http.createServer((req, res) => {
       case '/following': //フォロー一覧
         followingUserPage(req, res, sessions[sessionID].userID);
         break;
-      case 'followed': //フォロワー一覧
+      case '/followed': //フォロワー一覧
+        followerUserPage(req, res, sessions[sessionID].userID);
         break;
       default:
         // 画像ファイルを読み込む処理

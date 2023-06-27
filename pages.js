@@ -4,7 +4,7 @@ const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./page
 const { getAllPosts, getAllUsers, insertPost, deletePost, insertUser, findUser, updateUser, withdrawalUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 const { postLogout } = require('./sessions');
-const { getFollowingUser } = require('./followUtils');
+const { getFollowingUser, getFollowerUser, isFollowing } = require('./followUtils');
 
 // サインアップページ
 const signUpPage = (req, res) => {
@@ -340,6 +340,7 @@ const followingUserPage = (req, res, currentUserID) => {
     res.write(`<h1>フォロー一覧ページ</h1>`);
 
     res.write('<ul>');
+    
     for (let user of users) {
       res.write('<li>');
       res.write(`<a href="/users/${user.id}">${user.name}</a>`);
@@ -353,9 +354,62 @@ const followingUserPage = (req, res, currentUserID) => {
     }
     res.write('</ul>');
 
-
     footer(req, res);
     return;
+  })
+}
+
+// フォロワー一覧ページ。getFollowerUser()で、自身のフォロワーを抜き出し、isFollowing()でそのフォロワーをフォローしているか判定
+const followerUserPage = (req, res, currentUserID) => {
+  getFollowerUser(req, res, currentUserID, (err, users) => {
+    if (err) {
+      // エラーハンドリングを行う
+      console.error(err.message);
+      return;
+    }
+    header(req, res);
+
+    res.write(`<h1>フォロワー一覧ページ</h1>`);
+
+    res.write('<ul>');
+
+    // isFollowing関数は非同期のため、PromiseでArray.map()メソッドを使って非同期処理の結果が解決されるまで新しい配列の要素が生成されるのを待つ
+    const promises = users.map(user => {
+      return isFollowing(currentUserID, user.id)
+        .then((is_following) => {
+          res.write('<li>');
+          res.write(`<a href="/users/${user.id}">${user.name}</a>`);
+          if (user.profile_image) { res.write(`<img src="${user.profile_image}" alt="プロフィール画像" />`); }
+
+          if (is_following) {
+            res.write('<span>フォロー済み</span>');
+            res.write(`<form action="/unfollow/${user.id}" method="post">`);
+            res.write('<button type="submit">フォロー解除</button>');
+            res.write('</form>');
+          } else {
+            res.write(`<form action="/following/${user.id}" method="post">`);
+            res.write('<button type="submit">フォローする</button>');
+            res.write('</form>');
+          }
+          res.write('</li>');
+        })
+        .catch((error) => {
+          // エラーハンドリング
+          console.error(error);
+        });
+    });
+
+    Promise.all(promises)
+      .then(() => {
+        res.write('</ul>');
+
+        footer(req, res);
+      })
+      .catch((error) => {
+        // エラーハンドリング
+        console.error(error);
+      });
+
   })
 }
 
@@ -413,6 +467,7 @@ module.exports = {
   editProfilePage,
   updateEditProfilePage,
   followingUserPage,
+  followerUserPage,
   readImageFile,
   postWithdrawalUser,
   notFoundPage

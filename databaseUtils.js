@@ -61,7 +61,8 @@ const getAllUsers = (currentUserID, callback) => {
   db.all(`SELECT users.*,
   CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
 FROM users
-LEFT JOIN relationships ON relationships.follower_id = ? AND relationships.followed_id = users.id
+LEFT JOIN relationships
+ON relationships.follower_id = ? AND relationships.followed_id = users.id
 WHERE users.is_deleted = 0`, [currentUserID], (err, rows) => {
     if (err) {
       callback(err, null);

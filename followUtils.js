@@ -55,7 +55,6 @@ const getFollowingUser = (req, res, currentUserID, callback) => {
         [currentUserID],
         (err, rows) => {
             if (err) {
-                console.log('ここでエラーが起きてます');
                 console.error(err.message);
                 callback(err, null);
                 return;
@@ -64,8 +63,54 @@ const getFollowingUser = (req, res, currentUserID, callback) => {
         });
 }
 
+// ログイン中のユーザのフォロワーユーザを取得
+const getFollowerUser = (req, res, currentUserID, callback) => {
+    db.all(
+        `
+        SELECT users.*
+        FROM users
+        INNER JOIN relationships
+        ON relationships.follower_id = users.id AND relationships.followed_id = ?
+        WHERE users.is_deleted = 0
+        `,
+        [currentUserID],
+        (err, rows) => {
+            if (err) {
+                console.error(err.message);
+                callback(err, null);
+                return;
+            }
+            callback(null, rows);
+        });
+}
+
+// 該当のユーザをフォローしているか判定する関数
+const isFollowing = (currentUserID, userID) => {
+    return new Promise((resolve, reject) => {
+        db.get(
+            `
+        SELECT COUNT(*) AS count
+        FROM relationships
+        WHERE follower_id = ?
+        AND followed_id = ?
+        `,
+            [currentUserID, userID],
+            (err, row) => {
+                if (err) {
+                    console.error(err.message);
+                    reject(err);
+                    return;
+                }
+                const is_following = row.count > 0;
+                resolve(is_following);
+            });
+    });
+}
+
 module.exports = {
     followingUser,
     unfollowUser,
-    getFollowingUser
+    getFollowingUser,
+    getFollowerUser,
+    isFollowing
 }
