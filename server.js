@@ -2,10 +2,10 @@ const http = require('http');
 const { isDeepStrictEqual } = require('util');
 const path = require('path');
 const fs = require('fs');
-const { signUpPage, signInPage, topPage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
-const { followingUser,unfollowUser } = require('./followUtils');
+const { followingUser, unfollowUser } = require('./followUtils');
 
 const hostname = '127.0.0.1';
 const PORT = 3000;
@@ -18,8 +18,6 @@ const server = http.createServer((req, res) => {
   // セッションIDの取得
   const sessionID = req.headers.cookie ? req.headers.cookie.split('=')[1] : null
   console.log(`現在のcookieは、             →${sessionID}`);
-  // console.log(`サーバ側で保持しているセッションのユーザIDは、 ${sessions[sessionID]}`)
-
   console.log(`現在のsessions[sessionID]は、→${JSON.stringify(sessions[sessionID])}`);
 
   // 【セッションチェック】(サインインorサインアップページで無い時に、さらにセッションが無い時に)
@@ -59,9 +57,9 @@ const server = http.createServer((req, res) => {
         showUserPage(req, res, id);
         break;
       case '/post':
-        postPage(req, res); //投稿用ページの関数を呼んでいる
+        postPage(req, res);
         break;
-      case `/post/${id}`:
+      case `/post/${id}`: // 投稿詳細画面（ここでツリー表示）
         showPost(req, res, id);
         break;
       case '/mypage':
@@ -69,6 +67,11 @@ const server = http.createServer((req, res) => {
         break;
       case '/mypage/edit_profile':
         editProfilePage(req, res);
+        break;
+      case '/following': //フォロー一覧
+        followingUserPage(req, res, sessions[sessionID].userID);
+        break;
+      case 'followed': //フォロワー一覧
         break;
       default:
         // 画像ファイルを読み込む処理
@@ -113,7 +116,7 @@ const server = http.createServer((req, res) => {
         followingUser(req, res, sessions[sessionID].userID, id);
         break;
       case `/unfollow/${id}`:
-        unfollowUser(req,res,sessions[sessionID].userID, id);
+        unfollowUser(req, res, sessions[sessionID].userID, id);
         break;
       default:
         notFoundPage(req, res);

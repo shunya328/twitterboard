@@ -4,6 +4,7 @@ const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./page
 const { getAllPosts, getAllUsers, insertPost, deletePost, insertUser, findUser, updateUser, withdrawalUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 const { postLogout } = require('./sessions');
+const { getFollowingUser } = require('./followUtils');
 
 // サインアップページ
 const signUpPage = (req, res) => {
@@ -326,6 +327,40 @@ const updateEditProfilePage = (req, res, userID) => {
   });
 }
 
+// フォロー一覧ページ
+const followingUserPage = (req, res, currentUserID) => {
+  getFollowingUser(req, res, currentUserID, (err, users) => {
+    if (err) {
+      // エラーハンドリングを行う
+      console.error(err.message);
+      return;
+    }
+    header(req, res);
+
+    res.write(`<h1>フォロー一覧ページ</h1>`);
+
+    res.write('<ul>');
+    for (let user of users) {
+      res.write('<li>');
+      res.write(`<a href="/users/${user.id}">${user.name}</a>`);
+      if (user.profile_image) { res.write(`<img src="${user.profile_image}" alt="プロフィール画像" />`); }
+      // フォローするボタンの追加
+      res.write('<span>フォロー済み</span>');
+      res.write(`<form action="/unfollow/${user.id}" method="post">`);
+      res.write('<button type="submit">フォロー解除</button>');
+      res.write('</form>');
+      res.write('</li>\n');
+    }
+    res.write('</ul>');
+
+
+    footer(req, res);
+    return;
+  })
+}
+
+
+
 // 画像ファイルを読み込む関数
 const readImageFile = (req, res) => {
   const fileName = req.url.split('/').pop();
@@ -377,6 +412,7 @@ module.exports = {
   myPage,
   editProfilePage,
   updateEditProfilePage,
+  followingUserPage,
   readImageFile,
   postWithdrawalUser,
   notFoundPage
