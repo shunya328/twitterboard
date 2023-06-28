@@ -12,7 +12,7 @@ const signUpPage = (req, res) => {
 
   res.write('<h2>サインアップ</h2>');
   res.write('<form action="/sign_up" method="post">')
-  res.write('<input type="text" name="user_name" placeholder="user_name" required><br>');
+  res.write('<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$" required><br>');
   res.write('<input type="email" name="user_email" placeholder="e-mail" required><br>');
   res.write('<input type="password" name="user_password" placeholder="password" required><br>');
   res.write('<input type="submit" value="サインアップ">');
@@ -29,7 +29,7 @@ const signInPage = (req, res) => {
 
   res.write('<h2>サインイン</h2>');
   res.write('<form action="/sign_in" method="post">')
-  res.write('<input type="text" name="user_name" placeholder="user_name" required><br>');
+  res.write('<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$" required><br>');
   res.write('<input type="password" name="user_password" placeholder="password" required><br>');
   res.write('<input type="submit" value="サインイン">');
   res.write('</form>')
@@ -471,7 +471,7 @@ const editProfilePage = (req, res) => {
 
   res.write('<h2>プロフィール編集ページ</h2>\n');
   res.write('<form action="/mypage/edit_profile" method="post" enctype="multipart/form-data">')
-  res.write('<input type="text" name="user_name" placeholder="user_name"><br>');
+  res.write('<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$"><br>');
   res.write('<input type="email" name="user_email" placeholder="e-mail"><br>');
   res.write('<input type="password" name="user_password" placeholder="password"><br>');
   res.write('<textarea type="text" name="user_profile" placeholder="profile"></textarea><br>');
