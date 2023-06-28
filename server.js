@@ -2,7 +2,7 @@ const http = require('http');
 const { isDeepStrictEqual } = require('util');
 const path = require('path');
 const fs = require('fs');
-const { signUpPage, signInPage, topPage, myTimelinePage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, myTimelinePage, userTimelinePage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
 const { followingUser, unfollowUser } = require('./followUtils');
@@ -18,7 +18,7 @@ const server = http.createServer((req, res) => {
   // セッションIDの取得
   const sessionID = req.headers.cookie ? req.headers.cookie.split('=')[1] : null
   console.log(`現在のcookieは、             →${sessionID}`);
-  console.log(`現在のsessions[sessionID]は、→${JSON.stringify(sessions[sessionID])}`);
+  console.log(`現在のsessions[sessionID]は、→${sessions[sessionID]}`);
 
   // 【セッションチェック】(サインインorサインアップページで無い時に、さらにセッションが無い時に)
   if (req.url !== '/sign_in' && req.url !== '/sign_up' && !sessions[sessionID]) {
@@ -47,8 +47,6 @@ const server = http.createServer((req, res) => {
       case '/my_timeline':
         myTimelinePage(req, res, sessions[sessionID].userID);
         break;
-      case `timeline/${id}`:
-        break;
       case '/sign_up':
         signUpPage(req, res);
         break;
@@ -59,7 +57,7 @@ const server = http.createServer((req, res) => {
         userIndexPage(req, res, sessions[sessionID].userID);
         break;
       case `/users/${id}`:
-        showUserPage(req, res, id);
+        showUserPage(req, res, sessions[sessionID].userID, id);
         break;
       case '/post':
         postPage(req, res);
@@ -104,10 +102,12 @@ const server = http.createServer((req, res) => {
         break;
       case '/mypage/edit_profile':
         // updateEditProfilePageをPromiseで実行
-        updateEditProfilePage(req, res, sessions[sessionID].userID)
+        updateEditProfilePage(req, res, sessions[sessionID])
           .then((updateUser) => {
-            console.log(`updatedUser = ${updateUser}`);
-            sessions[sessionID] = updateUser;
+            if (updateUser) {
+              console.log(`updatedUser = ${updateUser}`);
+              sessions[sessionID] = updateUser;
+            }
           }).catch((error) => {
             // エラーハンドリング
             console.error(error);

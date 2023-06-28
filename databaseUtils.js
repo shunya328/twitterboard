@@ -76,6 +76,25 @@ WHERE (posts.user_id =? OR relationships.follower_id = ?)
     });
 }
 
+// データベースから、あるユーザのすべての投稿を取得する関数
+const getAllPostOfUser = (userID, callback) => {
+  db.all(`
+  SELECT posts.*, users.name, users.profile, users.profile_image, users.is_deleted AS user_is_deleted
+  FROM posts
+  INNER JOIN users ON posts.user_id = users.id
+  WHERE posts.user_id = ?
+  ORDER BY posts.date DESC
+  `,
+    [userID], (err, rows) => {
+      if (err) {
+        console.error(err.message);
+        callback(err, null);
+        return;
+      }
+      callback(null, rows);
+    });
+}
+
 
 //データベースから全ユーザデータを取得する関数。ログイン中のユーザがフォローしているユーザかどうかを判定
 const getAllUsers = (currentUserID, callback) => {
@@ -232,6 +251,7 @@ const insertUser = (userName, userEmail, userPassword, callback) => {
 const updateUser = (userID, userName, userEmail, userPassword, userProfile, userImage, callback) => {
   const isUserNameDuplicate = { value: false };
   const isUserEmailDuplicate = { value: false };
+  console.log('updateUserは回っているみたいinupdateUser')
 
   //ユーザ名の重複チェック
   db.get('SELECT COUNT (*) AS count FROM users WHERE name = ? AND id != ?', [userName, userID], (err, row) => {
@@ -349,6 +369,18 @@ const findUserSignUp = (userName, userEmail, userPassword, callback) => {
     });
 }
 
+// ユーザIDを使ってデータベースからユーザを検索する
+const findUserByUserID = (userID, callback) => {
+  db.all(`SELECT * FROM users WHERE id = ?`
+    , [userID], (err, rows) => {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, rows[0]);
+    });
+}
+
 // ユーザを退会する（論理削除）
 const withdrawalUser = (id, callback) => {
   db.run(`UPDATE users SET is_deleted = 1 WHERE id = ?`, [id], (err) => {
@@ -366,6 +398,7 @@ module.exports = {
   db,
   getAllPosts,
   getMyTimelinePosts,
+  getAllPostOfUser,
   getAllUsers,
   insertPost,
   getOnePost,
@@ -375,5 +408,6 @@ module.exports = {
   updateUser,
   findUserSignIn,
   findUserSignUp,
+  findUserByUserID,
   withdrawalUser
 }

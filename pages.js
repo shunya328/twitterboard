@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, getMyTimelinePosts, getAllUsers, insertPost, getOnePost, getReplyPost, deletePost, insertUser, findUser, updateUser, withdrawalUser } = require('./databaseUtils');
+const { getAllPosts, getMyTimelinePosts, getAllPostOfUser, getAllUsers, insertPost, getOnePost, getReplyPost, deletePost, insertUser, findUser, updateUser, findUserByUserID, withdrawalUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 const { postLogout } = require('./sessions');
 const { getFollowingUser, getFollowerUser, isFollowing } = require('./followUtils');
@@ -116,8 +116,6 @@ const myTimelinePage = (req, res, currentUserID) => {
   })
 }
 
-
-
 // ユーザ一覧ページ(GET)
 const userIndexPage = (req, res, currentUserID) => {
   header(req, res);
@@ -161,13 +159,75 @@ const userIndexPage = (req, res, currentUserID) => {
   });
 }
 
-// ユーザ詳細画面。ここでそのユーザの投稿が見れる
-const showUserPage = (req, res, userID) => {
-  header(req, res);
+// ユーザ詳細画面。ここでそのユーザの投稿が見れる。
+const showUserPage = (req, res, currentUserID, userID) => {
+  findUserByUserID(userID, (err, user) => {
+    if (err) {
+      console.error(err.message);
+      return;
+    }
 
-  res.write(`id:${userID}のユーザの詳細画面です`);
+    if (!user || user.is_deleted === 1) {
+      header(req, res);
+      res.write("ユーザが存在しません");
+      footer(req, res);
+      return;
+    }
 
-  footer(req, res);
+    getAllPostOfUser(userID, (err, posts) => {
+      if (err) {
+        console.error(err.message);
+        return;
+      } else if (posts.length === 0) {
+        header(req, res);
+        if (user.profile_image) {
+          res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+        } else {
+          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+        }
+        res.write(`<h2>${user.name}</h2><br>`);
+        res.write(`<h4>${user.profile}<h4><br>`);
+        res.write("<h3>投稿がありません</h3>");
+
+        footer(req, res);
+        return;
+      }
+
+      console.log('posts:', posts);
+
+      header(req, res);
+      if (posts[0].profile_image) {
+        res.write(`<img src="${posts[0].profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+      } else {
+        res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+      }
+      res.write(`<h2>${posts[0].name}</h2><br>`);
+      res.write(`<h4>${posts[0].profile}<h4><br>`);
+
+      res.write('<ul>');
+      for (let row of posts) {
+        res.write('<li style="border:1px solid #888; padding: 1em">');
+        if (row.is_deleted === 0) {
+          if (row.profile_image) {
+            res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+          } else {
+            res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+          }
+          res.write(`<a href="/users/${row.user_id}">${row.name}</a><br>`);
+          if (row.reply_to) { res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`); }
+          res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
+          if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+          res.write(`${row.date}<br>`);
+        } else {
+          res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
+        }
+        res.write('</li>\n');
+      }
+      res.write('</ul>');
+      footer(req, res);
+      return;
+    });
+  });
 }
 
 // 投稿ページ(GET)
@@ -407,8 +467,8 @@ const editProfilePage = (req, res) => {
   footer(req, res);
 }
 
-// （UPDATE）プロフィール編集実行！
-const updateEditProfilePage = (req, res, userID) => {
+// 【修正中】（UPDATE）プロフィール編集実行！
+const updateEditProfilePage = (req, res, currentUser) => {
   return new Promise((resolve, reject) => {
 
     //マルチパートフォームデータを処理するためのヘルパー関数たちを宣言
@@ -455,6 +515,8 @@ const updateEditProfilePage = (req, res, userID) => {
       // フォームデータの解析
       const contentType = req.headers['content-type'];
       const boundary = extractBoundary(contentType); // Content-Typeヘッダからマルチパートフォームデータの境界(boudary)を抽出する
+      console.log('boundary:', boundary);
+      console.log('body:', body);
 
       if (boundary) {
         const formData = parseFormData(body, boundary);
@@ -467,9 +529,17 @@ const updateEditProfilePage = (req, res, userID) => {
         const userPasswordToString = (user_password ? Buffer.from(user_password, 'binary').toString('utf-8') : null);
         const userProfileToString = (user_profile ? Buffer.from(user_profile, 'binary').toString('utf-8') : null);
 
+        if (!user_name && !user_email && !user_password && !user_profile && !user_image) {
+          res.write('特になにも更新されませんでした');
+          resolve(null); //特になにも入力されなかったらnullをresolve()の引数として渡す
+          footer(req, res);
+          return;
+        }
+
         // 現在ログインしているユーザの情報をアップデート
-        updateUser(userID, user_name, user_email, user_password, user_profile, user_image, (err) => {
+        updateUser(currentUser.userID, userNameToString, userEmailToString, userPasswordToString, userProfileToString, user_image, (err) => {
           if (err) {
+            console.log('updateUserは回っているみたいinERROR')
             console.error(err.message);
             res.write('<h2>プロフィールの更新に失敗しました</h2><br>');
             res.write(`<h4>${err.message}</h4>`);
@@ -477,11 +547,13 @@ const updateEditProfilePage = (req, res, userID) => {
             footer(req, res);
             return;
           }
+
+          console.log('updateUserは回っているみたい')
           const newProfile = {
-            userID: userID,
-            name: user_name,
-            email: user_email,
-            profile: user_profile
+            userID: currentUser.userID,
+            name: (userNameToString ? userNameToString : currentUser.name),
+            email: (userEmailToString ? userEmailToString : currentUser.email),
+            profile: (userProfileToString ? userProfileToString : currentUser.profile)
           };
 
           console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
@@ -490,6 +562,7 @@ const updateEditProfilePage = (req, res, userID) => {
 
           // サーバ側のセッション情報を返り値に
           resolve(newProfile); // resolveの引数に渡す
+          footer(req, res);
         });
       }
     })
