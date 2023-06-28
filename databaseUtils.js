@@ -153,7 +153,7 @@ const getOnePost = (req, res, postID, callback) => {
 
 // データベース上の特定の投稿に紐づくリプライをすべて取得する関数
 const getReplyPost = (req, res, postID, callback) => {
-  db.all(`SELECT posts.*, users.name
+  db.all(`SELECT posts.*, users.name, users.profile_image
   FROM posts
   INNER JOIN users ON posts.user_id = users.id
   WHERE posts.reply_to = ?

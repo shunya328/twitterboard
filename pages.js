@@ -127,6 +127,7 @@ const myTimelinePage = (req, res, currentUserID) => {
           }
 
           res.write(`<a href="/users/${row.user_id}">${row.name}</a><br>`);
+          if (row.reply_to) { res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`); }
           res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
           if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
           res.write(`${row.date}<br>`);
