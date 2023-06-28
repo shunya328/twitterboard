@@ -53,7 +53,7 @@ const topPage = (req, res, currentUserID) => {
     res.write('<h2>トップページ</h2>');
     res.write('<ul>');
     for (let row of posts) {
-      res.write('<li>');
+      res.write('<li style="border:1px solid #888; padding: 1em">');
       if (row.is_deleted === 0) {
         res.write(`ユーザ名：<a href="/users/${row.user_id}">${row.name}</a><br>`);
         res.write(`<a href="/post/${row.id}">${row.content}</a>`);
@@ -61,7 +61,7 @@ const topPage = (req, res, currentUserID) => {
         res.write(`${row.date}<br>`);
         if (row.user_id === currentUserID) { res.write('<button class="delete-btn-' + row.id + '">削除</button>'); }
       } else {
-        res.write('投稿は削除されました')
+        res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
       }
       res.write('</li>\n');
     }
@@ -235,7 +235,7 @@ const postPostPage = (req, res, currentUserID) => {
 }
 
 // 投稿の詳細画面(GET)
-const showPost = (req, res, postID) => {
+const showPost = (req, res, postID, currentUserID) => {
   // id=postIDのレコードをとってくる！
   getOnePost(req, res, postID, (err, row) => {
     if (err) {
@@ -246,18 +246,21 @@ const showPost = (req, res, postID) => {
     }
     header(req, res);
 
-    res.write(`id=${postID}番の投稿についての詳細画面です`);
+    res.write(`<h1>投稿詳細画面</h1>`);
     // 特定の投稿をここに表示
+    res.write('<div style="border:1px solid #888; padding: 1em; margin: 1em">');
     if (row.is_deleted === 0) {
       res.write(`ユーザ名：<a href="/users/${row.user_id}">${row.name}</a><br>`);
       res.write(`<a href="/post/${row.id}">${row.content}</a>`);
       if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
       res.write(`${row.date}<br>`);
     } else {
-      res.write('投稿は削除されています');
+      res.write(`<a href="/post/${row.id}">投稿は削除されています</a>`);
     }
+    res.write('</div>');
 
     // この投稿に対するリプライをする欄です
+    res.write('<h1>リプライを送る</h1>')
     res.write(`<form action="/post" method="post" enctype="multipart/form-data">
     <textarea name="kakikomi" style="width:80%;height:100px"></textarea><br>
     <a>画像を投稿：</a><input type="file" name="image" accept="image/*" /><br>
@@ -266,7 +269,7 @@ const showPost = (req, res, postID) => {
     </form>`)
 
     // 投稿に基づくリプライを取得
-    getReplyPost(req, res, postID, (err,rows)=>{
+    getReplyPost(req, res, postID, (err, rows) => {
       if (err) {
         // エラーが発生した場合の処理
         res.statusCode = err.statusCode || 500;
@@ -274,7 +277,49 @@ const showPost = (req, res, postID) => {
         return;
       }
 
+      res.write('<h2>リプライたち</h2>');
+
       // ここにrowsの数だけforループしてそれぞれの投稿を表示するコードを実装！！
+      for (let row of rows) {
+        res.write('<li style="border:1px solid #888; padding: 1em">');
+
+        if (row.is_deleted === 0) {
+          res.write(`ユーザ名：<a href="/users/${row.user_id}">${row.name}</a><br>`);
+          res.write(`<a href="/post/${row.id}">${row.content}</a>`);
+          if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+          res.write(`${row.date}<br>`);
+          if (row.user_id === currentUserID) { res.write('<button class="delete-btn-' + row.id + '">削除</button>'); }
+        } else {
+          res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
+        }
+
+        res.write('</li>\n');
+      }
+
+      // 削除ボタンのクリックイベントリスナーを設定
+      res.write('<script>');
+      res.write('document.addEventListener("DOMContentLoaded", () => {');
+      res.write('  const deleteButtons = document.querySelectorAll("[class^=\'delete-btn-\']");');
+      res.write('  deleteButtons.forEach((button) => {');
+      res.write('    button.addEventListener("click", (event) => {');
+      res.write('      const id = event.target.className.split(\'delete-btn-\')[1];');
+      res.write('      console.log("削除ボタンのID:", id);');
+      res.write('      fetch(`/posts/${id}`, { method: "DELETE" })');
+      res.write('        .then((response) => {');
+      res.write('          if (response.status === 200) {');
+      res.write('            console.log("投稿を削除しました");');
+      res.write('            window.location.href = "/";');
+      res.write('          } else {');
+      res.write('            console.error("削除エラー:", response.statusText);');
+      res.write('          }');
+      res.write('        })');
+      res.write('        .catch((error) => {');
+      res.write('          console.error("削除エラー:", error);');
+      res.write('        });');
+      res.write('    });');
+      res.write('  });');
+      res.write('});');
+      res.write('</script>');
 
       footer(req, res);
     })

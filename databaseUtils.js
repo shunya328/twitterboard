@@ -94,7 +94,6 @@ const insertPost = (content, image, reply_to, currentUserID) => {
       });
     } else {
       const imagePathInDB = null;
-
       // データベースに投稿の情報を格納
       db.run(`INSERT INTO posts (user_id, content, image, reply_to) VALUES (?, ?, ?, ?)`, [currentUserID, content, imagePathInDB, reply_to], (err) => {
         if (err) {

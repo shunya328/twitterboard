@@ -60,7 +60,7 @@ const server = http.createServer((req, res) => {
         postPage(req, res);
         break;
       case `/post/${id}`: // 投稿詳細画面（ここでツリー表示）
-        showPost(req, res, id);
+        showPost(req, res, id, sessions[sessionID].userID);
         break;
       case '/mypage':
         myPage(req, res);
