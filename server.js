@@ -47,6 +47,8 @@ const server = http.createServer((req, res) => {
       case '/my_timeline':
         myTimelinePage(req, res, sessions[sessionID].userID);
         break;
+      case `timeline/${id}`:
+        break;
       case '/sign_up':
         signUpPage(req, res);
         break;

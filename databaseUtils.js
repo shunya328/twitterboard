@@ -56,7 +56,7 @@ const getAllPosts = (callback) => {
   });
 }
 
-// データベースから、自身の投稿と、自身がフォローしているユーザの投稿を取得する関数
+// データベースから、自身の投稿と、自身がフォローしているユーザの投稿を取得する関数(ここではフォローユーザのリプライ投稿も全部取得している)
 const getMyTimelinePosts = (currentUserID, callback) => {
   db.all(`
 SELECT posts.*, users.name, users.profile_image
@@ -129,7 +129,7 @@ const insertPost = (content, image, reply_to, currentUserID) => {
 
 // データベース上の特定の投稿を取ってくる関数
 const getOnePost = (req, res, postID, callback) => {
-  db.get(`SELECT posts.*, users.name
+  db.get(`SELECT posts.*, users.name, users.profile_image
   FROM posts
   INNER JOIN users ON posts.user_id = users.id
   WHERE posts.id = ?`,
