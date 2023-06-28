@@ -66,7 +66,7 @@ const server = http.createServer((req, res) => {
         showPost(req, res, id, sessions[sessionID].userID);
         break;
       case '/mypage':
-        myPage(req, res);
+        myPage(req, res, sessions[sessionID].userID);
         break;
       case '/mypage/edit_profile':
         editProfilePage(req, res);

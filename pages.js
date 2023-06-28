@@ -424,30 +424,45 @@ const showPost = (req, res, postID, currentUserID) => {
 }
 
 // マイページ
-const myPage = (req, res) => {
-  header(req, res);
+const myPage = (req, res, currentUserID) => {
+  findUserByUserID(currentUserID, (err, user) => {
+    if (err) {
+      // エラーハンドリングを行う
+      console.error(err.message);
+      return;
+    }
+    header(req, res);
 
-  res.write('<h2>マイページ</h2>\n');
-  res.write('<h3><a href="/mypage/edit_profile">プロフィール編集</a></h3><br>');
-
-  res.write(`<form method="post" action="/logout">
-  <button type="submit">ログアウト</button>
-</form>`);
-
-  // 退会フォーム
-  res.write('<h2>退会</h2>\n');
-  res.write('<form action="/mypage/withdrawal" method="post" onsubmit="return confirmWithdrawal()">');
-  res.write('<button type="submit">退会する</button>');
-  res.write('</form>');
-
-  // 退会アラートのJavaScriopt関数
-  res.write('<script>');
-  res.write('function confirmWithdrawal() {');
-  res.write('  return confirm("本当に退会しますか？");');
-  res.write('}');
-  res.write('</script>');
-
-  footer(req, res);
+    res.write('<h2>マイプロフィール情報</h2>')
+    if (user.profile_image) {
+      res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+    } else {
+      res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+    }
+    res.write(`<a href="/users/${user.user_id}">${user.name}</a><br>`);
+    res.write(`メールアドレス：${user.email}<br>`);
+    res.write(`紹介文：${user.profile}<br>`);
+    res.write('<h3><a href="/mypage/edit_profile">プロフィール編集</a></h3><br>');
+  
+    res.write(`<form method="post" action="/logout">
+    <button type="submit">ログアウト</button>
+  </form>`);
+  
+    // 退会フォーム
+    res.write('<h2>退会</h2>\n');
+    res.write('<form action="/mypage/withdrawal" method="post" onsubmit="return confirmWithdrawal()">');
+    res.write('<button type="submit">退会する</button>');
+    res.write('</form>');
+  
+    // 退会アラートのJavaScriopt関数
+    res.write('<script>');
+    res.write('function confirmWithdrawal() {');
+    res.write('  return confirm("本当に退会しますか？");');
+    res.write('}');
+    res.write('</script>');
+  
+    footer(req, res);
+  });
 }
 
 // プロフィール編集ページ（GET）
@@ -515,8 +530,6 @@ const updateEditProfilePage = (req, res, currentUser) => {
       // フォームデータの解析
       const contentType = req.headers['content-type'];
       const boundary = extractBoundary(contentType); // Content-Typeヘッダからマルチパートフォームデータの境界(boudary)を抽出する
-      console.log('boundary:', boundary);
-      console.log('body:', body);
 
       if (boundary) {
         const formData = parseFormData(body, boundary);
