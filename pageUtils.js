@@ -13,6 +13,7 @@ const header = (req, res) => {
       <li><a href="/followed">フォロワー一覧</a></li>
       <li><a href="/post">投稿</a></li>
       <li><a href="/mypage">マイページ</a></li>
+      <li><a href="/search">検索する</a></li>
     </ul>
   </nav>
   `);

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, getMyTimelinePosts, getAllPostOfUser, getAllUsers, insertPost, getOnePost, getReplyPost, deletePost, insertUser, findUser, updateUser, findUserByUserID, withdrawalUser } = require('./databaseUtils');
+const { getAllPosts, getMyTimelinePosts, getAllPostOfUser, getAllUsers, insertPost, getOnePost, getReplyPost, deletePost, insertUser, findUser, updateUser, findUserByUserID, findUserBySearchWord, withdrawalUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 const { postLogout } = require('./sessions');
 const { getFollowingUser, getFollowerUser, isFollowing } = require('./followUtils');
@@ -185,7 +185,7 @@ const showUserPage = (req, res, currentUserID, userID) => {
         } else {
           res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
         }
-        res.write(`<h2>${user.name}</h2><br>`);
+        res.write(`<h2>${user.name}さんのタイムライン</h2><br>`);
         res.write(`<h4>${user.profile}<h4><br>`);
         res.write("<h3>投稿がありません</h3>");
 
@@ -443,24 +443,24 @@ const myPage = (req, res, currentUserID) => {
     res.write(`メールアドレス：${user.email}<br>`);
     res.write(`紹介文：${user.profile}<br>`);
     res.write('<h3><a href="/mypage/edit_profile">プロフィール編集</a></h3><br>');
-  
+
     res.write(`<form method="post" action="/logout">
     <button type="submit">ログアウト</button>
   </form>`);
-  
+
     // 退会フォーム
     res.write('<h2>退会</h2>\n');
     res.write('<form action="/mypage/withdrawal" method="post" onsubmit="return confirmWithdrawal()">');
     res.write('<button type="submit">退会する</button>');
     res.write('</form>');
-  
+
     // 退会アラートのJavaScriopt関数
     res.write('<script>');
     res.write('function confirmWithdrawal() {');
     res.write('  return confirm("本当に退会しますか？");');
     res.write('}');
     res.write('</script>');
-  
+
     footer(req, res);
   });
 }
@@ -676,6 +676,56 @@ const followerUserPage = (req, res, currentUserID) => {
   })
 }
 
+// 検索のフォームがあるページ
+const searchPage = (req, res) => {
+  header(req, res);
+
+  res.write(`
+  <h2>ユーザ検索</h2>
+  <form action="/search/users" method="get">
+    <input type="text" name="keyword" placeholder="ユーザ検索キーワードを入力">
+    <button type="submit">検索</button>
+  </form>
+  `)
+
+  footer(req, res);
+}
+
+// ユーザ検索の結果を返すページ
+const searchUserResultPage = (req, res, urlQueryParam) => {
+  const searchWord = urlQueryParam.split('keyword=').pop(); // urlQueryParamから検索ワードを抜き出す
+  findUserBySearchWord(searchWord,(err,users) => {
+    if (err) {
+      // エラーハンドリング
+      console.error(err);
+      res.statusCode = 500;
+      res.end('検索時にエラーが発生しました');
+      return;
+    }
+    header(req, res);
+
+    res.write(`<h1>検索ワード"${searchWord}"の検索結果</h1>`);
+
+    res.write('<ul>');
+    for (let user of users) {
+      if(!user.is_deleted){
+        res.write('<li>');
+        if (user.profile_image) {
+          res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+        } else {
+          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+        }
+        res.write(`<a href="/users/${user.id}">${user.name}</a>`);
+      }
+    }
+    res.write('</ul>');
+
+    footer(req, res);
+    return;
+  });
+}
+
+
 // 画像ファイルを読み込む関数
 const readImageFile = (req, res) => {
   const fileName = req.url.split('/').pop();
@@ -730,6 +780,8 @@ module.exports = {
   updateEditProfilePage,
   followingUserPage,
   followerUserPage,
+  searchPage,
+  searchUserResultPage,
   readImageFile,
   postWithdrawalUser,
   notFoundPage

@@ -381,6 +381,18 @@ const findUserByUserID = (userID, callback) => {
     });
 }
 
+// 検索ワードを使って、ユーザ名と突合し(あいまい検索)、データベースからユーザを検索する
+const findUserBySearchWord = (searchWord, callback) => {
+  db.all(`SELECT * FROM users WHERE name LIKE '%' || ? || '%'`, [searchWord], (err, rows) => {
+    if (err) {
+      console.error(err);
+      callback(err, null);
+      return;
+    }
+    callback(null, rows);
+  });
+}
+
 // ユーザを退会する（論理削除）と共に、そのユーザの投稿したデータも論理削除
 const withdrawalUser = (userID, callback) => {
   db.run(`UPDATE users SET is_deleted = 1 WHERE id = ?`, [userID], (err) => {
@@ -416,5 +428,6 @@ module.exports = {
   findUserSignIn,
   findUserSignUp,
   findUserByUserID,
+  findUserBySearchWord,
   withdrawalUser
 }

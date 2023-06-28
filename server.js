@@ -2,7 +2,7 @@ const http = require('http');
 const { isDeepStrictEqual } = require('util');
 const path = require('path');
 const fs = require('fs');
-const { signUpPage, signInPage, topPage, myTimelinePage, userTimelinePage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, myTimelinePage, userTimelinePage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, searchPage, searchUserResultPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
 const { followingUser, unfollowUser } = require('./followUtils');
@@ -37,6 +37,7 @@ const server = http.createServer((req, res) => {
   }
 
   const id = req.url.split('/').pop(); //URLの一番後ろのIDを取得
+  const urlQueryParam = req.url.split('?').pop(); //URLのクエリパラメータを取得
 
   //ルーティング
   if (req.method === 'GET') {
@@ -76,6 +77,12 @@ const server = http.createServer((req, res) => {
         break;
       case '/followed': //フォロワー一覧
         followerUserPage(req, res, sessions[sessionID].userID);
+        break;
+      case '/search': //検索フォームのページ
+        searchPage(req, res);
+        break;
+      case `/search/users?${urlQueryParam}`: //ユーザ検索をした結果のページ
+        searchUserResultPage(req, res, urlQueryParam);
         break;
       default:
         // 画像ファイルを読み込む処理
