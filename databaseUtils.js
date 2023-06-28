@@ -381,16 +381,23 @@ const findUserByUserID = (userID, callback) => {
     });
 }
 
-// ユーザを退会する（論理削除）
-const withdrawalUser = (id, callback) => {
-  db.run(`UPDATE users SET is_deleted = 1 WHERE id = ?`, [id], (err) => {
+// ユーザを退会する（論理削除）と共に、そのユーザの投稿したデータも論理削除
+const withdrawalUser = (userID, callback) => {
+  db.run(`UPDATE users SET is_deleted = 1 WHERE id = ?`, [userID], (err) => {
     if (err) {
       onsole.error(err);
       callback(err);
       return;
     }
-    console.log('withdrawalUserが呼ばれました');
-    callback(null);
+    db.run(`UPDATE posts SET is_deleted = 1 WHERE user_id = ?`, [userID], (err) => {
+      if (err) {
+        console.error(err);
+        callback(err);
+        return;
+      }
+      console.log('withdrawalUserが呼ばれました');
+      callback(null);
+    })
   })
 }
 

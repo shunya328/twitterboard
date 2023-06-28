@@ -467,7 +467,7 @@ const editProfilePage = (req, res) => {
   footer(req, res);
 }
 
-// 【修正中】（UPDATE）プロフィール編集実行！
+//（UPDATE）プロフィール編集実行！
 const updateEditProfilePage = (req, res, currentUser) => {
   return new Promise((resolve, reject) => {
 
