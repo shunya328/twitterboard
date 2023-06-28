@@ -114,49 +114,48 @@ const postSignUpPage = (req, res) => {
           console.error(err.message);
           return;
         }
-      })
+        //先ほどデータベースに格納したユーザの検索
+        findUserSignUp(parseBody.user_name, parseBody.user_email, parseBody.user_password, (err, user) => {
+          if (err) {
+            console.error(err.message);
+            return;
+          }
+          if (user) {
+            console.log('user:', user);
+            // サインアップ成功時にセッションIDを生成
+            const sessionID = generateSessionID(); //32桁のランダムな文字列を生成＆格納
 
-      //先ほどデータベースに格納したユーザの検索
-      findUserSignUp(parseBody.user_name, parseBody.user_email, parseBody.user_password, (err, user) => {
-        if (err) {
-          console.error(err.message);
+            // セッションデータに必要な情報を保存
+            // sessions.set(sessionID, { userID: user.id, name: user.name, email: user.email, profile: user.profile });
+            sessions[sessionID] = {
+              userID: user.id,
+              name: user.name,
+              email: user.email,
+              profile: user.profile
+            };
+            console.log(`sessions[sessionID].nameは、${sessions[sessionID].name}`);
+            console.log(`userIDは、${user.id}`)
+
+            // セッションIDをクライアントに送信(cookie)
+            res.setHeader('Set-Cookie', `sessionID=${sessionID}; Path=/`);
+
+            // ログイン成功のレスポンスを返す
+            res.statusCode = 200;
+
+            header(req, res);
+            res.write('<h2>サインアップに成功しました</h2>\n');
+            res.write(`ようこそ！${user.name}さん！`)
+          } else {
+            beforeLoginHeader(req, res);
+            res.write('<h2>サインアップに失敗しました</h2>');
+            res.write('<h5>ユーザ名やメールアドレスが重複しているかもしれません</h5>');
+            res.write('<a href="/sign_in">サインイン</a><br>');
+            res.write('<a href="/sign_up">新規登録</a>');
+          }
+          footer(req, res);
           return;
-        }
-        if (user) {
-          console.log('user:', user);
-          // サインアップ成功時にセッションIDを生成
-          const sessionID = generateSessionID(); //32桁のランダムな文字列を生成＆格納
-
-          // セッションデータに必要な情報を保存
-          // sessions.set(sessionID, { userID: user.id, name: user.name, email: user.email, profile: user.profile });
-          sessions[sessionID] = {
-            userID: user.id,
-            name: user.name,
-            email: user.email,
-            profile: user.profile
-          };
-          console.log(`sessions[sessionID].nameは、${sessions[sessionID].name}`);
-          console.log(`userIDは、${user.id}`)
-
-          // セッションIDをクライアントに送信(cookie)
-          res.setHeader('Set-Cookie', `sessionID=${sessionID}; Path=/`);
-
-          // ログイン成功のレスポンスを返す
-          res.statusCode = 200;
-
-          header(req, res);
-          res.write('<h2>サインアップに成功しました</h2>\n');
-          res.write(`ようこそ！${user.name}さん！`)
-        } else {
-          beforeLoginHeader(req, res);
-          res.write('<h2>サインアップに失敗しました</h2>');
-          res.write('<h5>ユーザ名やメールアドレスが重複しているかもしれません</h5>');
-          res.write('<a href="/sign_in">サインイン</a><br>');
-          res.write('<a href="/sign_up">新規登録</a>');
-        }
-        footer(req, res);
-        return;
-      });
+        });
+      })
     }
   });
 }
