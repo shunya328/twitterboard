@@ -96,8 +96,7 @@ const postSignUpPage = (req, res) => {
           return;
         }
         if (user) {
-          console.log(user);
-
+          console.log('user:',user);
           // サインアップ成功時にセッションIDを生成
           const sessionID = generateSessionID(); //32桁のランダムな文字列を生成＆格納
 

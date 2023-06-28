@@ -23,9 +23,9 @@ db.run(`CREATE TABLE IF NOT EXISTS posts (
 //usersテーブルの作成
 db.run(`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  email TEXT NOT NULL UNIQUE,
-  password TEXT NOT NULL,
+  name TEXT NOT NULL UNIQUE CHECK(name GLOB '[0-9A-Za-z]*'),
+  email TEXT NOT NULL UNIQUE CHECK(email GLOB '[a-zA-Z0-9_+-]*@?[a-zA-Z0-9]*'),
+  password TEXT NOT NULL ,
   profile TEXT DEFAULT '',
   profile_image TEXT,
   is_deleted INTEGER DEFAULT 0
