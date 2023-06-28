@@ -13,7 +13,8 @@ const signUpPage = (req, res) => {
   res.write('<h2>サインアップ</h2>');
   res.write('<form action="/sign_up" method="post">')
   res.write('<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$" required><br>');
-  res.write('<input type="email" name="user_email" placeholder="e-mail" required><br>');
+  // res.write('<input type="email" name="user_email" placeholder="e-mail" required><br>');
+  res.write('<input type="text" name="user_email" placeholder="e-mail" required><br>');
   res.write('<input type="password" name="user_password" placeholder="password" required><br>');
   res.write('<input type="submit" value="サインアップ">');
   res.write('</form>')
@@ -549,6 +550,26 @@ const updateEditProfilePage = (req, res, currentUser) => {
           return;
         }
 
+        // ユーザ名のバリデーション
+        const userNameRegex = /^[a-zA-Z0-9]+$/; // 半角英数字のみを許可する正規表現
+        if (!userNameRegex.test(userNameToString)) {
+          // ユーザ名が正規表現にマッチしない場合
+          res.write('<h2>ユーザ情報の更新に失敗しました</h2>');
+          res.write('<h5>ユーザ名は半角英数字のみを入力してください</h5>');
+          footer(req, res);
+          return;
+        }
+
+        // メールアドレスのバリデーション
+        const emailRegex = /^[a-zA-Z0-9_.+-]+@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.)+[a-zA-Z]{2,}$/; // メールアドレスの正規表現
+        if (!emailRegex.test(userEmailToString)) {
+          // メールアドレスが正規表現にマッチしない場合
+          res.write('<h2>ユーザ情報の更新に失敗しました</h2>');
+          res.write('<h5>正しい形式のメールアドレスを入力してください</h5>');
+          footer(req, res);
+          return;
+        }
+
         // 現在ログインしているユーザの情報をアップデート
         updateUser(currentUser.userID, userNameToString, userEmailToString, userPasswordToString, userProfileToString, user_image, (err) => {
           if (err) {
@@ -694,7 +715,7 @@ const searchPage = (req, res) => {
 // ユーザ検索の結果を返すページ
 const searchUserResultPage = (req, res, urlQueryParam) => {
   const searchWord = urlQueryParam.split('keyword=').pop(); // urlQueryParamから検索ワードを抜き出す
-  findUserBySearchWord(searchWord,(err,users) => {
+  findUserBySearchWord(searchWord, (err, users) => {
     if (err) {
       // エラーハンドリング
       console.error(err);
@@ -708,7 +729,7 @@ const searchUserResultPage = (req, res, urlQueryParam) => {
 
     res.write('<ul>');
     for (let user of users) {
-      if(!user.is_deleted){
+      if (!user.is_deleted) {
         res.write('<li>');
         if (user.profile_image) {
           res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);

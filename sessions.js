@@ -56,7 +56,7 @@ const postSignInPage = (req, res) => {
       } else {
         beforeLoginHeader(req, res);
         res.write('<h2>サインインに失敗しました</h2>');
-        if(user.is_deleted === 1){ res.write('ユーザは削除されています<br>'); }
+        if (user.is_deleted === 1) { res.write('ユーザは削除されています<br>'); }
         res.write('<a href="/sign_in">再度サインインする</a><br>');
         res.write('<a href="/sign_up">新規登録</a>');
       }
@@ -81,6 +81,33 @@ const postSignUpPage = (req, res) => {
     const parseBody = queryString.parse(body);
 
     if (parseBody.user_name && parseBody.user_email && parseBody.user_password) {
+
+      // ユーザ名のバリデーション
+      const userNameRegex = /^[a-zA-Z0-9]+$/; // 半角英数字のみを許可する正規表現
+      if (!userNameRegex.test(parseBody.user_name)) {
+        // ユーザ名が正規表現にマッチしない場合
+        beforeLoginHeader(req, res);
+        res.write('<h2>サインアップに失敗しました</h2>');
+        res.write('<h5>ユーザ名は半角英数字のみを入力してください</h5>');
+        res.write('<a href="/sign_in">サインイン</a><br>');
+        res.write('<a href="/sign_up">新規登録</a>');
+        footer(req, res);
+        return;
+      }
+
+      // メールアドレスのバリデーション
+      const emailRegex = /^[a-zA-Z0-9_.+-]+@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.)+[a-zA-Z]{2,}$/; // メールアドレスの正規表現
+      if (!emailRegex.test(parseBody.user_email)) {
+        // メールアドレスが正規表現にマッチしない場合
+        beforeLoginHeader(req, res);
+        res.write('<h2>サインアップに失敗しました</h2>');
+        res.write('<h5>正しい形式のメールアドレスを入力してください</h5>');
+        res.write('<a href="/sign_in">サインイン</a><br>');
+        res.write('<a href="/sign_up">新規登録</a>');
+        footer(req, res);
+        return;
+      }
+
       //データベースに投稿を格納
       insertUser(parseBody.user_name, parseBody.user_email, parseBody.user_password, (err) => {
         if (err) {
@@ -96,7 +123,7 @@ const postSignUpPage = (req, res) => {
           return;
         }
         if (user) {
-          console.log('user:',user);
+          console.log('user:', user);
           // サインアップ成功時にセッションIDを生成
           const sessionID = generateSessionID(); //32桁のランダムな文字列を生成＆格納
 
