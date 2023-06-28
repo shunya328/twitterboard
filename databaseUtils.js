@@ -56,6 +56,27 @@ const getAllPosts = (callback) => {
   });
 }
 
+// データベースから、自身の投稿と、自身がフォローしているユーザの投稿を取得する関数
+const getMyTimelinePosts = (currentUserID, callback) => {
+  db.all(`
+SELECT posts.*, users.name, users.profile_image
+FROM posts
+INNER JOIN users ON posts.user_id = users.id
+LEFT JOIN relationships ON posts.user_id = relationships.followed_id
+WHERE (posts.user_id =? OR relationships.follower_id = ?)
+`,
+    [currentUserID, currentUserID],
+    (err, rows) => {
+      if (err) {
+        console.error(err.message);
+        callback(err, null);
+        return;
+      }
+      callback(null, rows);
+    });
+}
+
+
 //データベースから全ユーザデータを取得する関数。ログイン中のユーザがフォローしているユーザかどうかを判定
 const getAllUsers = (currentUserID, callback) => {
   db.all(`SELECT users.*,
@@ -344,6 +365,7 @@ const withdrawalUser = (id, callback) => {
 module.exports = {
   db,
   getAllPosts,
+  getMyTimelinePosts,
   getAllUsers,
   insertPost,
   getOnePost,

@@ -2,7 +2,7 @@ const http = require('http');
 const { isDeepStrictEqual } = require('util');
 const path = require('path');
 const fs = require('fs');
-const { signUpPage, signInPage, topPage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, myTimelinePage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
 const { followingUser, unfollowUser } = require('./followUtils');
@@ -43,6 +43,9 @@ const server = http.createServer((req, res) => {
     switch (req.url) { //リクエストされたurlが引数に入る
       case '/':
         topPage(req, res, sessions[sessionID].userID); //トップページ用の関数を呼んでいる
+        break;
+      case '/my_timeline':
+        myTimelinePage(req, res, sessions[sessionID].userID);
         break;
       case '/sign_up':
         signUpPage(req, res);
