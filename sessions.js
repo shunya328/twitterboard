@@ -56,7 +56,7 @@ const postSignInPage = (req, res) => {
       } else {
         beforeLoginHeader(req, res);
         res.write('<h2>サインインに失敗しました</h2>');
-        if (user.is_deleted === 1) { res.write('ユーザは削除されています<br>'); }
+        if (user && user.is_deleted === 1) { res.write('ユーザは削除されています<br>'); }
         res.write('<a href="/sign_in">再度サインインする</a><br>');
         res.write('<a href="/sign_up">新規登録</a>');
       }
@@ -181,7 +181,6 @@ const postLogout = (req, res, sessions, sessionID) => {
   res.end();
   return;
 }
-
 
 module.exports = {
   sessions,

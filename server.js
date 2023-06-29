@@ -5,7 +5,7 @@ const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sess
 const { deletePost, db } = require('./databaseUtils');
 const { followingUser, unfollowUser } = require('./followUtils');
 
-const hostname = '127.0.0.1';
+const hostname = '0.0.0.0';
 const PORT = 3000;
 
 // httpサーバの定義
