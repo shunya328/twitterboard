@@ -56,27 +56,6 @@ const getAllPosts = (callback) => {
   });
 }
 
-// データベースから、自身の投稿と、自身がフォローしているユーザの投稿を取得する関数(ここではフォローユーザのリプライ投稿も全部取得している)
-const getMyTimelinePosts = (currentUserID, callback) => {
-  db.all(`
-SELECT posts.*, users.name, users.profile_image
-FROM posts
-INNER JOIN users ON posts.user_id = users.id
-LEFT JOIN relationships ON posts.user_id = relationships.followed_id
-WHERE (posts.user_id =? OR relationships.follower_id = ?)
-ORDER BY posts.date DESC
-`,
-    [currentUserID, currentUserID],
-    (err, rows) => {
-      if (err) {
-        console.error(err.message);
-        callback(err, null);
-        return;
-      }
-      callback(null, rows);
-    });
-}
-
 // 自分のタイムライン取得、ページネーション対応
 const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callback) => {
   const offset = (currentPage - 1) * limit;
@@ -498,7 +477,6 @@ const withdrawalUser = (userID, callback) => {
 module.exports = {
   db,
   getAllPosts,
-  getMyTimelinePosts,
   getMyTimelinePostsPagenation,
   getAllPostOfUser,
   getAllPostOfUserPagenation,
