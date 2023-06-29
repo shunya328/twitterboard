@@ -66,7 +66,6 @@ const postSignInPage = (req, res) => {
   });
 }
 
-
 // サインアップのPOSTメソッド
 const postSignUpPage = (req, res) => {
   //まずはPOSTで送られたデータを受け取る
@@ -102,6 +101,19 @@ const postSignUpPage = (req, res) => {
         beforeLoginHeader(req, res);
         res.write('<h2>サインアップに失敗しました</h2>');
         res.write('<h5>正しい形式のメールアドレスを入力してください</h5>');
+        res.write('<a href="/sign_in">サインイン</a><br>');
+        res.write('<a href="/sign_up">新規登録</a>');
+        footer(req, res);
+        return;
+      }
+
+      // パスワードのバリデーション
+      const passwordRegex = /^[\w@!%*$#?&]+$/;
+      if (!passwordRegex.test(parseBody.user_password)) {
+        // パスワードが正規表現にマッチしない場合
+        beforeLoginHeader(req, res);
+        res.write('<h2>サインアップに失敗しました</h2>');
+        res.write('<h5>正しい形式のパスワードを入力してください。半角英数字と一部の記号のみ許可されます。</h5>');
         res.write('<a href="/sign_in">サインイン</a><br>');
         res.write('<a href="/sign_up">新規登録</a>');
         footer(req, res);

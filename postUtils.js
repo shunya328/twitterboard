@@ -2,6 +2,16 @@ const { header, footer } = require('./pageUtils');
 const { insertPost, updateUser, withdrawalUser } = require('./databaseUtils');
 const { postLogout } = require('./sessions');
 
+// XSS(クロスサイトスクリプティング)対策
+const escapeHTML = (string) => {
+    return string.replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, "&#x27;")
+        .replace(/`/g, '&#x60;');;
+}
+
 // 投稿ページ(POST)
 const postPostPage = (req, res, currentUserID) => {
 
@@ -55,12 +65,14 @@ const postPostPage = (req, res, currentUserID) => {
             // フォームデータの取得
             const { kakikomi, image, reply_to } = formData;
             const kakikomiToString = Buffer.from(kakikomi, 'binary').toString('utf-8') //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
+            // 投稿のXSS対策
+            const escapedKakikomi = escapeHTML(kakikomiToString);
 
-            if (kakikomiToString || image) {
-                insertPost(kakikomiToString, image, reply_to, currentUserID)
+            if (escapedKakikomi || image) {
+                insertPost(escapedKakikomi, image, reply_to, currentUserID)
                     .then((imagePath) => {
                         res.write('<h2>ツイート（文字）投稿しました</h2>\n');
-                        res.write(`投稿内容: ${decodeURIComponent(kakikomiToString)}`);
+                        res.write(`投稿内容: ${decodeURIComponent(escapedKakikomi)}`);
                         res.write('<h2>ツイート（画像）投稿しました</h2>\n');
                         res.write(`画像パス: ${imagePath}`);
                         footer(req, res);
@@ -213,4 +225,4 @@ module.exports = {
     postPostPage,
     updateEditProfilePage,
     postWithdrawalUser
-  }
+}
