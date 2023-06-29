@@ -530,7 +530,7 @@ const searchPage = (req, res) => {
   res.write(`
   <h2>ユーザ検索</h2>
   <form action="/search/users" method="get">
-    <input type="text" name="keyword" placeholder="ユーザ検索キーワードを入力">
+    <input type="text" name="keyword" pattern="^[a-zA-Z0-9]+$" placeholder="ユーザ検索キーワードを入力">
     <button type="submit">検索</button>
   </form>
   `)
@@ -552,6 +552,10 @@ const searchUserResultPage = (req, res, urlQueryParam) => {
     header(req, res);
 
     res.write(`<h1>検索ワード"${searchWord}"の検索結果</h1>`);
+
+    if (users.length === 0) {
+      res.write('<h3>ユーザはいません</h3>')
+    }
 
     res.write('<ul>');
     for (let user of users) {
