@@ -1,11 +1,8 @@
 const http = require('http');
-const { isDeepStrictEqual } = require('util');
-const path = require('path');
-const fs = require('fs');
 const { signUpPage, signInPage, topPage, myTimeLinePagenation, userIndexPage,showUserPagePagenation, postPage, showPost, myPage, editProfilePage, followingUserPage, followerUserPage, searchPage, searchUserResultPage, readImageFile, notFoundPage } = require('./pages');
 const {postPostPage, updateEditProfilePage, postWithdrawalUser} = require('./postUtils');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
-const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
+const { deletePost, db } = require('./databaseUtils');
 const { followingUser, unfollowUser } = require('./followUtils');
 
 const hostname = '127.0.0.1';

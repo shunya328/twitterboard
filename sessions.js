@@ -1,5 +1,5 @@
-const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, insertPost, deletePost, insertUser, findUserSignIn, findUserSignUp, updateUser } = require('./databaseUtils');
+const { header, footer, beforeLoginHeader } = require('./pageUtils');
+const { insertUser, findUserSignIn, findUserSignUp } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 
 
@@ -112,6 +112,12 @@ const postSignUpPage = (req, res) => {
       insertUser(parseBody.user_name, parseBody.user_email, parseBody.user_password, (err) => {
         if (err) {
           console.error(err.message);
+          beforeLoginHeader(req, res);
+          res.write('<h2>サインアップに失敗しました</h2>');
+          res.write(`<h5>${err.message}</h5>`);
+          res.write('<a href="/sign_in">サインイン</a><br>');
+          res.write('<a href="/sign_up">新規登録</a>');
+          footer(req, res);
           return;
         }
         //先ほどデータベースに格納したユーザの検索

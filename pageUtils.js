@@ -6,8 +6,8 @@ const header = (req, res) => {
   res.write(`
   <nav>
     <ul>
-      <li><a href="/">トップ</a></li>
-      <li><a href="/my_timeline/1">自分のタイムライン(ページネーションあり)</a></li>
+      <li><a href="/">トップ(全投稿を表示してみる)</a></li>
+      <li><a href="/my_timeline/1">自分のタイムライン</a></li>
       <li><a href="/users">ユーザ一覧</a></li>
       <li><a href="/following">フォロー一覧</a></li>
       <li><a href="/followed">フォロワー一覧</a></li>
