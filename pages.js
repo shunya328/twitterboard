@@ -552,7 +552,7 @@ const updateEditProfilePage = (req, res, currentUser) => {
 
         // ユーザ名のバリデーション
         const userNameRegex = /^[a-zA-Z0-9]+$/; // 半角英数字のみを許可する正規表現
-        if (!userNameRegex.test(userNameToString)) {
+        if (!userNameRegex.test(userNameToString) && userNameToString) {
           // ユーザ名が正規表現にマッチしない場合
           res.write('<h2>ユーザ情報の更新に失敗しました</h2>');
           res.write('<h5>ユーザ名は半角英数字のみを入力してください</h5>');
@@ -562,7 +562,7 @@ const updateEditProfilePage = (req, res, currentUser) => {
 
         // メールアドレスのバリデーション
         const emailRegex = /^[a-zA-Z0-9_.+-]+@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.)+[a-zA-Z]{2,}$/; // メールアドレスの正規表現
-        if (!emailRegex.test(userEmailToString)) {
+        if (!emailRegex.test(userEmailToString) && userEmailToString) {
           // メールアドレスが正規表現にマッチしない場合
           res.write('<h2>ユーザ情報の更新に失敗しました</h2>');
           res.write('<h5>正しい形式のメールアドレスを入力してください</h5>');
