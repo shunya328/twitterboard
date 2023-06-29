@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, getMyTimelinePosts, getAllPostOfUser, getAllUsers, insertPost, getOnePost, getReplyPost, deletePost, insertUser, findUser, updateUser, findUserByUserID, findUserBySearchWord, withdrawalUser } = require('./databaseUtils');
+const { getAllPosts, getMyTimelinePosts, getMyTimelinePostsPagenation, getAllPostOfUser, getAllUsers, insertPost, getOnePost, getReplyPost, deletePost, insertUser, findUser, updateUser, findUserByUserID, findUserBySearchWord, withdrawalUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 const { postLogout } = require('./sessions');
 const { getFollowingUser, getFollowerUser, isFollowing } = require('./followUtils');
@@ -115,6 +115,54 @@ const myTimelinePage = (req, res, currentUserID) => {
     footer(req, res);
     return;
   })
+}
+
+// 【実装中】自分のタイムライン（ページネーション機能込み）
+const myTimeLinePagenation = (req, res, currentUserID, currentPage, limit) => {
+  getMyTimelinePostsPagenation(currentUserID, currentPage, limit, (err, posts, totalCount) => {
+    if (err) {
+      console.error(err.message);
+      return;
+    }
+    header(req, res);
+
+    res.write(`<h2>自分のタイムライン ${currentPage}ページ目</h2>`);
+    res.write('<ul>');
+    for (let row of posts) {
+      if (!row.reply_to || row.user_id === currentUserID) {
+        res.write('<li style="border:1px solid #888; padding: 1em">');
+        if (row.is_deleted === 0) {
+
+          if (row.profile_image) {
+            res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+          } else {
+            res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+          }
+
+          res.write(`<a href="/users/${row.user_id}">${row.name}</a><br>`);
+          if (row.reply_to) { res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`); }
+          res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
+          if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+          res.write(`${row.date}<br>`);
+        } else {
+          res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
+        }
+        res.write('</li>\n');
+      }
+    }
+    res.write('</ul>');
+
+    //ページネーションのリンク
+    if (currentPage > 1) {
+      res.write(`<a href="/my_timeline/${(currentPage - 1)}">前のページ</a>`)
+    }
+    res.write(`${currentPage}`);
+    if ((parseInt(currentPage) * limit) <= totalCount) {
+      res.write(`<a href="/my_timeline/${(parseInt(currentPage) + 1)}">次のページ</a>`)
+    }
+    footer(req, res);
+    return;
+  });
 }
 
 // ユーザ一覧ページ(GET)
@@ -791,6 +839,7 @@ module.exports = {
   signInPage,
   topPage,
   myTimelinePage,
+  myTimeLinePagenation,
   userIndexPage,
   showUserPage,
   postPage,

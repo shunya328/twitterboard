@@ -2,7 +2,7 @@ const http = require('http');
 const { isDeepStrictEqual } = require('util');
 const path = require('path');
 const fs = require('fs');
-const { signUpPage, signInPage, topPage, myTimelinePage, userTimelinePage, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, searchPage, searchUserResultPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, myTimelinePage, myTimeLinePagenation, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, searchPage, searchUserResultPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
 const { followingUser, unfollowUser } = require('./followUtils');
@@ -47,6 +47,9 @@ const server = http.createServer((req, res) => {
         break;
       case '/my_timeline':
         myTimelinePage(req, res, sessions[sessionID].userID);
+        break;
+      case `/my_timeline/${id}`:
+        myTimeLinePagenation(req, res, sessions[sessionID].userID, id, 5); //最後の引数は、ひとつのページに表示する投稿数
         break;
       case '/sign_up':
         signUpPage(req, res);

@@ -76,6 +76,47 @@ WHERE (posts.user_id =? OR relationships.follower_id = ?)
     });
 }
 
+// 自分のタイムライン取得、ページネーション対応
+const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callback) => {
+  const offset = (currentPage - 1) * limit;
+  console.log('offset:', offset);
+
+  // まず、対象となる投稿の全レコード数を取得する
+  db.get(`
+      SELECT COUNT(*) AS total_count
+      FROM posts
+      INNER JOIN users ON posts.user_id = users.id
+      LEFT JOIN relationships ON posts.user_id = relationships.followed_id
+      WHERE (posts.user_id =? OR relationships.follower_id = ?)
+      `, [currentUserID, currentUserID], (err, result) => {
+    if (err) {
+      console.error(err.message);
+      callback(err, null);
+      return;
+    }
+    const totalCount = result.total_count; //レコード数をここに格納
+
+    // ページネーションに対応した、対象となる投稿だけを取得
+    db.all(`
+      SELECT posts.*, users.name, users.profile_image
+      FROM posts
+      INNER JOIN users ON posts.user_id = users.id
+      LEFT JOIN relationships ON posts.user_id = relationships.followed_id
+      WHERE (posts.user_id =? OR relationships.follower_id = ?)
+      LIMIT ? OFFSET ?
+      `,
+      [currentUserID, currentUserID, limit, offset],
+      (err, rows) => {
+        if (err) {
+          console.error(err.message);
+          callback(err, null);
+          return;
+        }
+        callback(null, rows, totalCount); //レコード数もコールバックの引数に渡す
+      });
+  })
+}
+
 // データベースから、あるユーザのすべての投稿を取得する関数
 const getAllPostOfUser = (userID, callback) => {
   db.all(`
@@ -417,6 +458,7 @@ module.exports = {
   db,
   getAllPosts,
   getMyTimelinePosts,
+  getMyTimelinePostsPagenation,
   getAllPostOfUser,
   getAllUsers,
   insertPost,
