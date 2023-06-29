@@ -413,15 +413,17 @@ const myPage = (req, res, currentUserID) => {
 }
 
 // プロフィール編集ページ（GET）
-const editProfilePage = (req, res) => {
+const editProfilePage = (req, res, currentUser) => {
   header(req, res);
+
+  console.log('currentUser.profile:',currentUser.profile);
 
   res.write('<h2>プロフィール編集ページ</h2>\n');
   res.write('<form action="/mypage/edit_profile" method="post" enctype="multipart/form-data">')
-  res.write('<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$"><br>');
-  res.write('<input type="email" name="user_email" placeholder="e-mail"><br>');
+  res.write(`<input type="text" name="user_name" placeholder="user_name" value="${currentUser.name}" pattern="^[0-9A-Za-z]+$"><br>`);
+  res.write(`<input type="email" name="user_email" placeholder="e-mail" value="${currentUser.email}"><br>`);
   res.write('<input type="password" name="user_password" placeholder="password"><br>');
-  res.write('<textarea type="text" name="user_profile" placeholder="profile"></textarea><br>');
+  res.write(`<textarea type="text" name="user_profile" placeholder="profile">${currentUser.profile}</textarea><br>`);
   res.write('<a>画像を投稿：</a><input type="file" name="user_image" accept="image/*" /><br>')
   res.write('<input type="submit" value="編集する">');
   res.write('</form>');

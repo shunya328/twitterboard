@@ -69,7 +69,7 @@ const server = http.createServer((req, res) => {
         myPage(req, res, sessions[sessionID].userID);
         break;
       case '/mypage/edit_profile':
-        editProfilePage(req, res);
+        editProfilePage(req, res, sessions[sessionID]);
         break;
       case '/following': //フォロー一覧
         followingUserPage(req, res, sessions[sessionID].userID);
