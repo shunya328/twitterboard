@@ -13,8 +13,7 @@ const signUpPage = (req, res) => {
   res.write('<h2>サインアップ</h2>');
   res.write('<form action="/sign_up" method="post">')
   res.write('<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$" required><br>');
-  // res.write('<input type="email" name="user_email" placeholder="e-mail" required><br>');
-  res.write('<input type="text" name="user_email" placeholder="e-mail" required><br>');
+  res.write('<input type="email" name="user_email" placeholder="e-mail" required><br>');
   res.write('<input type="password" name="user_password" placeholder="password" required><br>');
   res.write('<input type="submit" value="サインアップ">');
   res.write('</form>')
@@ -117,7 +116,7 @@ const myTimelinePage = (req, res, currentUserID) => {
   })
 }
 
-// 【実装中】自分のタイムライン（ページネーション機能込み）
+// 自分のタイムライン（ページネーション機能込み）
 const myTimeLinePagenation = (req, res, currentUserID, currentPage, limit) => {
   getMyTimelinePostsPagenation(currentUserID, currentPage, limit, (err, posts, totalCount) => {
     if (err) {
@@ -129,35 +128,34 @@ const myTimeLinePagenation = (req, res, currentUserID, currentPage, limit) => {
     res.write(`<h2>自分のタイムライン ${currentPage}ページ目</h2>`);
     res.write('<ul>');
     for (let row of posts) {
-      if (!row.reply_to || row.user_id === currentUserID) {
-        res.write('<li style="border:1px solid #888; padding: 1em">');
-        if (row.is_deleted === 0) {
+      res.write('<li style="border:1px solid #888; padding: 1em">');
+      if (row.is_deleted === 0) {
 
-          if (row.profile_image) {
-            res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
-          } else {
-            res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
-          }
-
-          res.write(`<a href="/users/${row.user_id}">${row.name}</a><br>`);
-          if (row.reply_to) { res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`); }
-          res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
-          if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
-          res.write(`${row.date}<br>`);
+        if (row.profile_image) {
+          res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
         } else {
-          res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
+          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
         }
-        res.write('</li>\n');
+
+        res.write(`<a href="/users/${row.user_id}">${row.name}</a><br>`);
+        if (row.reply_to) { res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`); }
+        res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
+        if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+        res.write(`${row.date}<br>`);
+      } else {
+        res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
       }
+      res.write('</li>\n');
     }
     res.write('</ul>');
 
+    console.log('totalCount:', totalCount);
     //ページネーションのリンク
     if (currentPage > 1) {
       res.write(`<a href="/my_timeline/${(currentPage - 1)}">前のページ</a>`)
     }
     res.write(`${currentPage}`);
-    if ((parseInt(currentPage) * limit) <= totalCount) {
+    if ((parseInt(currentPage) * limit) < totalCount) {
       res.write(`<a href="/my_timeline/${(parseInt(currentPage) + 1)}">次のページ</a>`)
     }
     footer(req, res);
@@ -793,7 +791,6 @@ const searchUserResultPage = (req, res, urlQueryParam) => {
     return;
   });
 }
-
 
 // 画像ファイルを読み込む関数
 const readImageFile = (req, res) => {

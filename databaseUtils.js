@@ -64,6 +64,7 @@ FROM posts
 INNER JOIN users ON posts.user_id = users.id
 LEFT JOIN relationships ON posts.user_id = relationships.followed_id
 WHERE (posts.user_id =? OR relationships.follower_id = ?)
+ORDER BY posts.date DESC
 `,
     [currentUserID, currentUserID],
     (err, rows) => {
@@ -103,6 +104,7 @@ const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callbac
       INNER JOIN users ON posts.user_id = users.id
       LEFT JOIN relationships ON posts.user_id = relationships.followed_id
       WHERE (posts.user_id =? OR relationships.follower_id = ?)
+      ORDER BY posts.date DESC
       LIMIT ? OFFSET ?
       `,
       [currentUserID, currentUserID, limit, offset],

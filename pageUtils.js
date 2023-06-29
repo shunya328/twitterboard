@@ -8,6 +8,7 @@ const header = (req, res) => {
     <ul>
       <li><a href="/">トップ</a></li>
       <li><a href="/my_timeline">自分のタイムライン</a></li>
+      <li><a href="/my_timeline/1">自分のタイムライン(ページネーションあり)</a></li>
       <li><a href="/users">ユーザ一覧</a></li>
       <li><a href="/following">フォロー一覧</a></li>
       <li><a href="/followed">フォロワー一覧</a></li>
