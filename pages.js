@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, getMyTimelinePosts, getMyTimelinePostsPagenation, getAllPostOfUser, getAllUsers, insertPost, getOnePost, getReplyPost, deletePost, insertUser, findUser, updateUser, findUserByUserID, findUserBySearchWord, withdrawalUser } = require('./databaseUtils');
+const { getAllPosts, getMyTimelinePosts, getMyTimelinePostsPagenation, getAllPostOfUser, getAllPostOfUserPagenation, getAllUsers, insertPost, getOnePost, getReplyPost, deletePost, insertUser, findUser, updateUser, findUserByUserID, findUserBySearchWord, withdrawalUser } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 const { postLogout } = require('./sessions');
 const { getFollowingUser, getFollowerUser, isFollowing } = require('./followUtils');
@@ -149,7 +149,6 @@ const myTimeLinePagenation = (req, res, currentUserID, currentPage, limit) => {
     }
     res.write('</ul>');
 
-    console.log('totalCount:', totalCount);
     //ページネーションのリンク
     if (currentPage > 1) {
       res.write(`<a href="/my_timeline/${(currentPage - 1)}">前のページ</a>`)
@@ -158,6 +157,7 @@ const myTimeLinePagenation = (req, res, currentUserID, currentPage, limit) => {
     if ((parseInt(currentPage) * limit) < totalCount) {
       res.write(`<a href="/my_timeline/${(parseInt(currentPage) + 1)}">次のページ</a>`)
     }
+
     footer(req, res);
     return;
   });
@@ -207,7 +207,7 @@ const userIndexPage = (req, res, currentUserID) => {
 }
 
 // ユーザ詳細画面。ここでそのユーザの投稿が見れる。
-const showUserPage = (req, res, currentUserID, userID) => {
+const showUserPage = (req, res, userID) => {
   findUserByUserID(userID, (err, user) => {
     if (err) {
       console.error(err.message);
@@ -271,6 +271,86 @@ const showUserPage = (req, res, currentUserID, userID) => {
         res.write('</li>\n');
       }
       res.write('</ul>');
+      footer(req, res);
+      return;
+    });
+  });
+}
+
+// ユーザ詳細画面（ページネーション機能あり）
+const showUserPagePagenation = (req, res, userID, currentPage, limit) => {
+  findUserByUserID(userID, (err, user) => {
+    if (err) {
+      console.error(err.message);
+      return;
+    }
+
+    if (!user || user.is_deleted === 1) {
+      header(req, res);
+      res.write("ユーザが存在しません");
+      footer(req, res);
+      return;
+    }
+
+    getAllPostOfUserPagenation(userID, currentPage, limit, (err, posts, totalCount) => {
+      if (err) {
+        console.error(err.message);
+        return;
+      } else if (posts.length === 0) {
+        header(req, res);
+        if (user.profile_image) {
+          res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+        } else {
+          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+        }
+        res.write(`<h2>${user.name}さんのタイムライン</h2><br>`);
+        res.write(`<h4>${user.profile}<h4><br>`);
+        res.write("<h3>投稿がありません</h3>");
+
+        footer(req, res);
+        return;
+      }
+
+      header(req, res);
+      if (posts[0].profile_image) {
+        res.write(`<img src="${posts[0].profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+      } else {
+        res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+      }
+      res.write(`<h2>${posts[0].name}</h2><br>`);
+      res.write(`<h4>${posts[0].profile}<h4><br>`);
+
+      res.write('<ul>');
+      for (let row of posts) {
+        res.write('<li style="border:1px solid #888; padding: 1em">');
+        if (row.is_deleted === 0) {
+          if (row.profile_image) {
+            res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+          } else {
+            res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+          }
+          res.write(`<a href="/users/${row.user_id}">${row.name}</a><br>`);
+          if (row.reply_to) { res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`); }
+          res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
+          if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+          res.write(`${row.date}<br>`);
+        } else {
+          res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
+        }
+        res.write('</li>\n');
+      }
+      res.write('</ul>');
+
+      //ページネーションのリンク
+      if (currentPage > 1) {
+        res.write(`<a href="/users/${userID}/${(currentPage - 1)}">前のページ</a>`)
+      }
+      res.write(`${currentPage}`);
+      if ((parseInt(currentPage) * limit) < totalCount) {
+        res.write(`<a href="/users/${userID}/${(parseInt(currentPage) + 1)}">次のページ</a>`)
+      }
+      console.log('totalCount:', totalCount);
+
       footer(req, res);
       return;
     });
@@ -839,6 +919,7 @@ module.exports = {
   myTimeLinePagenation,
   userIndexPage,
   showUserPage,
+  showUserPagePagenation,
   postPage,
   postPostPage,
   showPost,

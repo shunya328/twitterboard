@@ -2,7 +2,7 @@ const http = require('http');
 const { isDeepStrictEqual } = require('util');
 const path = require('path');
 const fs = require('fs');
-const { signUpPage, signInPage, topPage, myTimelinePage, myTimeLinePagenation, userIndexPage, showUserPage, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, searchPage, searchUserResultPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
+const { signUpPage, signInPage, topPage, myTimelinePage, myTimeLinePagenation, userIndexPage, showUserPage,showUserPagePagenation, postPage, postPostPage, showPost, myPage, editProfilePage, updateEditProfilePage, followingUserPage, followerUserPage, searchPage, searchUserResultPage, readImageFile, postWithdrawalUser, notFoundPage } = require('./pages');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db, updateUser, withdrawalUser } = require('./databaseUtils');
 const { followingUser, unfollowUser } = require('./followUtils');
@@ -37,6 +37,7 @@ const server = http.createServer((req, res) => {
   }
 
   const id = req.url.split('/').pop(); //URLの一番後ろのIDを取得
+  const secondID = req.url.split('/')[req.url.split('/').length - 2]; //URLの後ろから二番目のIDを取得
   const urlQueryParam = req.url.split('?').pop(); //URLのクエリパラメータを取得
 
   //ルーティング
@@ -61,7 +62,10 @@ const server = http.createServer((req, res) => {
         userIndexPage(req, res, sessions[sessionID].userID);
         break;
       case `/users/${id}`:
-        showUserPage(req, res, sessions[sessionID].userID, id);
+        showUserPage(req, res, id);
+        break;
+      case `/users/${secondID}/${id}`:
+        showUserPagePagenation(req, res, secondID, id, 5);
         break;
       case '/post':
         postPage(req, res);

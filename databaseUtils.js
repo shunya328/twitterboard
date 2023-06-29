@@ -127,15 +127,54 @@ const getAllPostOfUser = (userID, callback) => {
   INNER JOIN users ON posts.user_id = users.id
   WHERE posts.user_id = ?
   ORDER BY posts.date DESC
-  `,
-    [userID], (err, rows) => {
+  `, [userID], (err, rows) => {
+    if (err) {
+      console.error(err.message);
+      callback(err, null);
+      return;
+    }
+    callback(null, rows);
+  });
+}
+
+// データベースから、あるユーザの全ての投稿を取得する関数（ページネーション機能込み）
+const getAllPostOfUserPagenation = (userID, currentPage, limit, callback) => {
+  const offset = (currentPage - 1) * limit;
+  console.log('offset:', offset);
+
+  //まずはレコード数を取得
+  db.get(`
+  SELECT COUNT(*) AS total_count
+  FROM posts
+  INNER JOIN users ON posts.user_id = users.id
+  WHERE posts.user_id = ?
+  `, [userID], (err, result) => {
+    if (err) {
+      console.error(err.message);
+      callback(err, null);
+      return;
+    }
+    const totalCount = result.total_count; //レコード数をここに格納
+    console.log('totalCount:', totalCount);
+
+    //ページネーションに対応したレコードだけを取得
+    db.all(`
+    SELECT posts.*, users.name, users.profile, users.profile_image, users.is_deleted AS user_is_deleted
+    FROM posts
+    INNER JOIN users ON posts.user_id = users.id
+    WHERE posts.user_id = ?
+    ORDER BY posts.date DESC
+    LIMIT ? OFFSET ?
+    `, [userID, limit, offset], (err, rows) => {
       if (err) {
         console.error(err.message);
         callback(err, null);
         return;
       }
-      callback(null, rows);
+
+      callback(null, rows, totalCount); //レコード数もコールバックの引数に渡す
     });
+  });
 }
 
 
@@ -462,6 +501,7 @@ module.exports = {
   getMyTimelinePosts,
   getMyTimelinePostsPagenation,
   getAllPostOfUser,
+  getAllPostOfUserPagenation,
   getAllUsers,
   insertPost,
   getOnePost,
