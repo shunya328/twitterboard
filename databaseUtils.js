@@ -58,7 +58,6 @@ const getAllPosts = (callback) => {
 // 自分のタイムライン取得、ページネーション対応
 const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callback) => {
   const offset = (currentPage - 1) * limit;
-  console.log('offset:', offset);
 
   // まず、対象となる投稿の全レコード数を取得する
   db.get(`
@@ -97,7 +96,6 @@ const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callbac
           callback(err, null);
           return;
         }
-        console.log('totalCount:', totalCount);
         callback(null, rows, totalCount); //レコード数もコールバックの引数に渡す
       });
   })
@@ -124,7 +122,6 @@ const getAllPostOfUser = (userID, callback) => {
 // データベースから、あるユーザの全ての投稿を取得する関数（ページネーション機能込み）
 const getAllPostOfUserPagenation = (userID, currentPage, limit, callback) => {
   const offset = (currentPage - 1) * limit;
-  console.log('offset:', offset);
 
   //まずはレコード数を取得
   db.get(`
@@ -139,7 +136,6 @@ const getAllPostOfUserPagenation = (userID, currentPage, limit, callback) => {
       return;
     }
     const totalCount = result.total_count; //レコード数をここに格納
-    console.log('totalCount:', totalCount);
 
     //ページネーションに対応したレコードだけを取得
     db.all(`
@@ -155,7 +151,6 @@ const getAllPostOfUserPagenation = (userID, currentPage, limit, callback) => {
         callback(err, null);
         return;
       }
-
       callback(null, rows, totalCount); //レコード数もコールバックの引数に渡す
     });
   });
@@ -273,6 +268,7 @@ const deletePost = (req, res, postID) => {
 
 //データベースに新たにユーザ情報を登録する関数
 const insertUser = (userName, userEmail, userPassword, callback) => {
+  //じつはこのオブジェクトの宣言なくてもうまく動く気がする
   const isUserNameDuplicate = { value: false };
   const isUserEmailDuplicate = { value: false };
   //ユーザ名の重複チェック

@@ -145,6 +145,11 @@ const server = http.createServer((req, res) => {
   }
 });
 
+// 例外処理によって、なにかエラーが起きたとしても最低限落ちないサーバーにします
+process.on('uncaughtException', (err) => {
+  console.log('！！！！！！！エラーが発生しました！！！！！！！でもサーバーは動き続けます・・・\n',err);
+});
+
 // サーバー起動実行
 server.listen(PORT, hostname, () => {
   console.log(`Server running at http://${hostname}:${PORT}`);
