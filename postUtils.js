@@ -12,7 +12,7 @@ const escapeHTML = (string) => {
         .replace(/`/g, '&#x60;');;
 }
 
-// 投稿ページ(POST)
+// 投稿する！(POST)
 const postPostPage = (req, res, currentUserID) => {
 
     //マルチパートフォームデータを処理するためのヘルパー関数たちを宣言
@@ -44,7 +44,7 @@ const postPostPage = (req, res, currentUserID) => {
     }
 
     header(req, res);
-    //まずはPOSTで送られたデータを受け取る
+    //まずはPOSTで送られたデータ（リクエストボディ）を受け取る
     //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
     let body = [];
     req.on('data', (chunk) => {
@@ -61,14 +61,13 @@ const postPostPage = (req, res, currentUserID) => {
 
         if (boundary) {
             const formData = parseFormData(body, boundary);
-
             // フォームデータの取得
             const { kakikomi, image, reply_to } = formData;
-            const kakikomiToString = Buffer.from(kakikomi, 'binary').toString('utf-8') //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
+            const kakikomiToString = kakikomi ? Buffer.from(kakikomi, 'binary').toString('utf-8') : '';//ここで、バイナリデータを正しく文字列に変換(日本語に対応)
             // 投稿のXSS対策
-            const escapedKakikomi = escapeHTML(kakikomiToString);
+            const escapedKakikomi = kakikomiToString ? escapeHTML(kakikomiToString) : '';
 
-            if (escapedKakikomi || image) {
+            if (escapedKakikomi || image) { //文字、もしくは画像の投稿がある場合
                 insertPost(escapedKakikomi, image, reply_to, currentUserID)
                     .then((imagePath) => {
                         res.write('<h2>ツイート（文字）投稿しました</h2>\n');
@@ -82,6 +81,9 @@ const postPostPage = (req, res, currentUserID) => {
                         res.write('<h2>エラーが発生しました</h2>\n');
                         footer(req, res);
                     })
+            } else { //なんの投稿もない場合
+                res.write('<h2>なにも投稿しませんでした</h2>\n');
+                footer(req, res);
             }
         }
         return;

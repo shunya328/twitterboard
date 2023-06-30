@@ -104,7 +104,7 @@ const myTimeLinePagenation = (req, res, currentUserID, currentPage, limit) => {
         res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
         if (row.reply_to) { res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`); }
         res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
-        if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+        if (row.image) { res.write(`<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`); }
         res.write(`${row.date}<br>`);
       } else {
         res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
@@ -227,7 +227,7 @@ const showUserPagePagenation = (req, res, userID, currentPage, limit) => {
           res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
           if (row.reply_to) { res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`); }
           res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
-          if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+          if (row.image) { res.write(`<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`); }
           res.write(`${row.date}<br>`);
         } else {
           res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
@@ -290,7 +290,7 @@ const showPost = (req, res, postID, currentUserID) => {
       }
       res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
       res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
-      if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+      if (row.image) { res.write(`<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`); }
       res.write(`${row.date}<br>`);
       if (row.user_id === currentUserID) { res.write('<button class="delete-btn-' + row.id + '">削除</button>'); }
     } else {
@@ -357,7 +357,7 @@ const showPost = (req, res, postID, currentUserID) => {
           }
           res.write(`<a href="/users/${row.user_id}">${row.name}</a><br>`);
           res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
-          if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
+          if (row.image) { res.write(`<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`); }
           res.write(`${row.date}<br>`);
         } else {
           res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
