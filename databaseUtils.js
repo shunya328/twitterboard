@@ -98,7 +98,7 @@ const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callbac
         }
         callback(null, rows, totalCount); //レコード数もコールバックの引数に渡す
       });
-  })
+  });
 }
 
 // データベースから、あるユーザのすべての投稿を取得する関数
