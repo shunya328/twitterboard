@@ -34,9 +34,12 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // URLから取得された情報
   const id = req.url.split('/').pop(); //URLの一番後ろのIDを取得
   const secondID = req.url.split('/')[req.url.split('/').length - 2]; //URLの後ろから二番目のIDを取得
   const urlQueryParam = req.url.split('?').pop(); //URLのクエリパラメータを取得
+
+  // 様々な制限。ここの数字を変えるだけで簡単に変更がかけられます
   const maxPostCount = 5; // １ページに表示させる最大投稿数（ページネーション）
   const maxPostWordCount = 140; //ひとつの投稿の文字数制限
   const maxUserIdWordCount = 15; //ユーザ名の文字数制限
@@ -45,34 +48,34 @@ const server = http.createServer((req, res) => {
   //ルーティング
   if (req.method === 'GET') {
     switch (req.url) { //リクエストされたurlが引数に入る
-      case '/':
+      case '/': //TOPページ
         topPage(req, res, sessions[sessionID].userID); //トップページ用の関数を呼んでいる
         break;
-      case `/my_timeline/${id}`:
+      case `/my_timeline/${id}`: //ログインしている人のタイムライン
         myTimeLinePagenation(req, res, sessions[sessionID].userID, id, maxPostCount); //最後の引数は、ひとつのページに表示する投稿上限数
         break;
-      case '/sign_up':
+      case '/sign_up': //サインアップページ
         signUpPage(req, res);
         break;
-      case '/sign_in':
+      case '/sign_in': //サインインページ
         signInPage(req, res);
         break;
-      case '/users':
+      case '/users': // ユーザ一覧ページ
         userIndexPage(req, res, sessions[sessionID].userID);
         break;
-      case `/users/${secondID}/${id}`:
+      case `/users/${secondID}/${id}`: //任意のユーザの投稿だけ一覧で見れるページ
         showUserPagePagenation(req, res, sessions[sessionID].userID, secondID, id, maxPostCount); //最後の引数は、ひとつのページに表示する投稿上限数
         break;
-      case '/post':
+      case '/post': //投稿を行うページ
         postPage(req, res);
         break;
-      case `/post/${id}`: // 投稿詳細画面（ここでリプライ表示）
+      case `/post/${id}`: // 任意の投稿の詳細画面（ここでリプライ表示）
         showPost(req, res, id, sessions[sessionID].userID);
         break;
-      case '/mypage':
+      case '/mypage': // マイページ
         myPage(req, res, sessions[sessionID].userID);
         break;
-      case '/mypage/edit_profile':
+      case '/mypage/edit_profile': // 自分のユーザプロフィール情報の編集ページ
         editProfilePage(req, res, sessions[sessionID]);
         break;
       case '/following': //フォロー一覧
@@ -98,22 +101,22 @@ const server = http.createServer((req, res) => {
     }
   } else if (req.method === 'POST') {
     switch (req.url) {
-      case '/post':
+      case '/post': //投稿する
         postPostPage(req, res, sessions[sessionID].userID, maxPostWordCount, fileSizeLimit);
         break;
-      case `/delete/post/${id}`:
+      case `/delete/post/${id}`: //任意の投稿を削除する
         deletePost(req, res, id);
         break;
-      case '/sign_up':
+      case '/sign_up': //サインアップをする
         postSignUpPage(req, res, maxUserIdWordCount);
         break;
-      case '/sign_in':
+      case '/sign_in': //サインインをする
         postSignInPage(req, res);
         break;
-      case '/logout':
+      case '/logout': //ログアウトをする
         postLogout(req, res, sessions, sessionID);
         break;
-      case '/mypage/edit_profile':
+      case '/mypage/edit_profile': //自分のユーザ情報を変更する
         // updateEditProfilePageをPromiseで実行
         updateEditProfilePage(req, res, sessions[sessionID], maxUserIdWordCount)
           .then((updateUser) => {
@@ -126,13 +129,13 @@ const server = http.createServer((req, res) => {
             console.error(error);
           });
         break;
-      case '/mypage/withdrawal':
+      case '/mypage/withdrawal': //退会する
         postWithdrawalUser(req, res, sessions, sessionID);
         break;
-      case `/following/${id}`:
+      case `/following/${id}`: //任意のユーザをフォローする
         followingUser(req, res, sessions[sessionID].userID, id);
         break;
-      case `/unfollow/${id}`:
+      case `/unfollow/${id}`: //任意のユーザのフォローを解除する
         unfollowUser(req, res, sessions[sessionID].userID, id);
         break;
       default:

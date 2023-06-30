@@ -79,7 +79,7 @@ const postPostPage = (req, res, currentUserID, maxPostWordCount, fileSizeLimit) 
                 return;
             }
 
-            if (escapedKakikomi || image) { //文字、もしくは画像の投稿がある場合
+            if (escapedKakikomi || image) { //文字、もしくは画像の投稿がある場合、DB投入
                 insertPost(escapedKakikomi, image, reply_to, currentUserID)
                     .then((imagePath) => {
                         res.write('<h2>ツイート（文字）投稿しました</h2>\n');
