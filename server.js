@@ -97,6 +97,9 @@ const server = http.createServer((req, res) => {
       case '/post':
         postPostPage(req, res, sessions[sessionID].userID);
         break;
+      case `/delete/post/${id}`:
+        deletePost(req, res, id);
+        break;
       case '/sign_up':
         postSignUpPage(req, res);
         break;

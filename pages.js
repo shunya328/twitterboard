@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { header, footer, beforeLoginHeader, beforeLoginFooter } = require('./pageUtils');
-const { getAllPosts, getMyTimelinePostsPagenation, getAllPostOfUserPagenation, getAllUsers, getOnePost, getReplyPost, findUserByUserID, findUserBySearchWord } = require('./databaseUtils');
+const { getMyTimelinePostsPagenation, getAllPostOfUserPagenation, getAllUsers, getOnePost, getReplyPost, findUserByUserID, findUserBySearchWord } = require('./databaseUtils');
 const { getFollowingUser, getFollowerUser, isFollowing } = require('./followUtils');
 
 // サインアップページ
@@ -290,38 +290,17 @@ const showPost = (req, res, postID, currentUserID) => {
       res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
       if (row.image) { res.write(`<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`); }
       res.write(`${row.date}<br>`);
-      if (row.user_id === currentUserID) { res.write('<button class="delete-btn-' + row.id + '">削除</button>'); }
+      if (row.user_id === currentUserID) {
+        res.write(`
+          <form action="/delete/post/${row.id}" method="post">
+            <button type="submit">投稿削除</button>
+          </form>
+        `)
+      }
     } else {
       res.write(`<a href="/post/${row.id}">投稿は削除されています</a>`);
     }
     res.write('</div>');
-
-
-    // 削除ボタンのクリックイベントリスナーを設定
-    res.write('<script>');
-    res.write('document.addEventListener("DOMContentLoaded", () => {');
-    res.write('  const deleteButtons = document.querySelectorAll("[class^=\'delete-btn-\']");');
-    res.write('  deleteButtons.forEach((button) => {');
-    res.write('    button.addEventListener("click", (event) => {');
-    res.write('      const id = event.target.className.split(\'delete-btn-\')[1];');
-    res.write('      console.log("削除ボタンのID:", id);');
-    res.write('      fetch(`/posts/${id}`, { method: "DELETE" })');
-    res.write('        .then((response) => {');
-    res.write('          if (response.status === 200) {');
-    res.write('            console.log("投稿を削除しました");');
-    res.write('            window.location.href = "/";');
-    res.write('          } else {');
-    res.write('            console.error("削除エラー:", response.statusText);');
-    res.write('          }');
-    res.write('        })');
-    res.write('        .catch((error) => {');
-    res.write('          console.error("削除エラー:", error);');
-    res.write('        });');
-    res.write('    });');
-    res.write('  });');
-    res.write('});');
-    res.write('</script>');
-
 
     // この投稿に対するリプライをする欄です
     res.write('<h1>リプライを送る</h1>')
@@ -370,7 +349,7 @@ const showPost = (req, res, postID, currentUserID) => {
 
 // マイページ
 const myPage = (req, res, currentUserID) => {
-  findUserByUserID(currentUserID, (err, user) => {
+  findUserByUserID(currentUserID, currentUserID, (err, user) => {
     if (err) {
       // エラーハンドリングを行う
       console.error(err.message);

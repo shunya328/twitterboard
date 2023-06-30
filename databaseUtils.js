@@ -166,10 +166,10 @@ const getAllPostOfUserPagenation = (userID, currentPage, limit, callback) => {
 const getAllUsers = (currentUserID, callback) => {
   db.all(`SELECT users.*,
   CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
-FROM users
-LEFT JOIN relationships
-ON relationships.follower_id = ? AND relationships.followed_id = users.id
-WHERE users.is_deleted = 0`, [currentUserID], (err, rows) => {
+  FROM users
+  LEFT JOIN relationships
+  ON relationships.follower_id = ? AND relationships.followed_id = users.id
+  WHERE users.is_deleted = 0`, [currentUserID], (err, rows) => {
     if (err) {
       callback(err, null);
       return;
@@ -254,14 +254,20 @@ const getReplyPost = (req, res, postID, callback) => {
 }
 
 //データベースの特定の投稿を削除する関数(論理削除)
-const deletePost = (id, callback) => {
-  db.run(`UPDATE posts SET is_deleted = 1 WHERE id = ?`, [id], (err) => {
+const deletePost = (req, res, postID) => {
+  db.run(`UPDATE posts SET is_deleted = 1 WHERE id = ?`, [postID], (err) => {
     if (err) {
-      callback(err);
+      console.error(err.message);
+      // エラーハンドリングを行う
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: '投稿を削除できませんでした' }));
       return;
     }
-    callback(null);
-    console.log('deletePostが呼ばれました');
+    // 現在のページにリダイレクト（直前のリクエストのURLにリダイレクト）
+    const previousPageURL = req.headers.referer;
+    res.writeHead(302, { 'Location': previousPageURL });
+    res.end(JSON.stringify({ message: 'フォローを解除しました' }));
+    return;
   })
 }
 

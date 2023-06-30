@@ -1,5 +1,5 @@
 const { header, footer } = require('./pageUtils');
-const { insertPost, updateUser, withdrawalUser } = require('./databaseUtils');
+const { insertPost, updateUser, withdrawalUser, deletePost } = require('./databaseUtils');
 const { postLogout } = require('./sessions');
 
 // XSS(クロスサイトスクリプティング)対策
@@ -91,7 +91,7 @@ const postPostPage = (req, res, currentUserID) => {
 }
 
 
-//（UPDATE）プロフィール編集実行！
+//（UPDATEだがメソッドはPOST）プロフィール編集実行！
 const updateEditProfilePage = (req, res, currentUser) => {
     return new Promise((resolve, reject) => {
 
