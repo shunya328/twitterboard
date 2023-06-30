@@ -65,7 +65,7 @@ const postSignInPage = (req, res) => {
 }
 
 // サインアップのPOSTメソッド
-const postSignUpPage = (req, res) => {
+const postSignUpPage = (req, res, maxUserIdWordCount) => {
   //まずはPOSTで送られたデータを受け取る
   //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
   let body = [];
@@ -80,11 +80,11 @@ const postSignUpPage = (req, res) => {
     if (parseBody.user_name && parseBody.user_email && parseBody.user_password) {
       // ユーザ名のバリデーション
       const userNameRegex = /^[a-zA-Z0-9]+$/; // 半角英数字のみを許可する正規表現
-      if (!userNameRegex.test(parseBody.user_name)) {
+      if (!userNameRegex.test(parseBody.user_name) || parseBody.user_name.length > maxUserIdWordCount) {
         // ユーザ名が正規表現にマッチしない場合
         beforeLoginHeader(req, res);
         res.write('<h2>サインアップに失敗しました</h2>');
-        res.write('<h5>ユーザ名は半角英数字のみを入力してください</h5>');
+        res.write('<h5>ユーザ名は半角英数字のみを入力してください。また、ユーザ名は15文字を超えないようにしてください</h5>');
         res.write('<a href="/sign_in">サインイン</a><br>');
         res.write('<a href="/sign_up">新規登録</a>');
         footer(req, res);

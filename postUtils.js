@@ -96,7 +96,7 @@ const postPostPage = (req, res, currentUserID, maxPostWordCount) => {
 }
 
 //（UPDATEだが使ってるhttpメソッドはPOST）プロフィール編集実行！
-const updateEditProfilePage = (req, res, currentUser) => {
+const updateEditProfilePage = (req, res, currentUser, maxUserIdWordCount) => {
     return new Promise((resolve, reject) => {
 
         //マルチパートフォームデータを処理するためのヘルパー関数たちを宣言
@@ -148,7 +148,6 @@ const updateEditProfilePage = (req, res, currentUser) => {
 
                 // フォームデータの取得
                 const { user_name, user_email, user_password, user_profile, user_image } = formData;
-                console.log('user_name:', user_name);
                 const userNameToString = (user_name ? Buffer.from(user_name, 'binary').toString('utf-8') : null); //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
                 const userEmailToString = (user_email ? Buffer.from(user_email, 'binary').toString('utf-8') : null);
                 const userPasswordToString = (user_password ? Buffer.from(user_password, 'binary').toString('utf-8') : null);
@@ -163,10 +162,10 @@ const updateEditProfilePage = (req, res, currentUser) => {
 
                 // ユーザ名のバリデーション
                 const userNameRegex = /^[a-zA-Z0-9]+$/; // 半角英数字のみを許可する正規表現
-                if (!userNameRegex.test(userNameToString) && userNameToString) {
+                if (!userNameRegex.test(userNameToString) && userNameToString || userNameToString.length > maxUserIdWordCount) {
                     // ユーザ名が正規表現にマッチしない場合
                     res.write('<h2>ユーザ情報の更新に失敗しました</h2>');
-                    res.write('<h5>ユーザ名は半角英数字のみを入力してください</h5>');
+                    res.write(`<h5>ユーザ名は半角英数字のみを入力してください。また、ユーザ名は${maxUserIdWordCount}文字以下にしてください。</h5>`);
                     footer(req, res);
                     return;
                 }

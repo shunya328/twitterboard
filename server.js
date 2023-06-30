@@ -104,7 +104,7 @@ const server = http.createServer((req, res) => {
         deletePost(req, res, id);
         break;
       case '/sign_up':
-        postSignUpPage(req, res);
+        postSignUpPage(req, res, maxUserIdWordCount);
         break;
       case '/sign_in':
         postSignInPage(req, res);
@@ -114,7 +114,7 @@ const server = http.createServer((req, res) => {
         break;
       case '/mypage/edit_profile':
         // updateEditProfilePageをPromiseで実行
-        updateEditProfilePage(req, res, sessions[sessionID])
+        updateEditProfilePage(req, res, sessions[sessionID], maxUserIdWordCount)
           .then((updateUser) => {
             if (updateUser) {
               console.log(`updatedUser = ${updateUser}`);
