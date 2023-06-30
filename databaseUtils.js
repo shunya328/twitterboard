@@ -15,7 +15,7 @@ db.run(`CREATE TABLE IF NOT EXISTS posts (
   is_deleted INTEGER DEFAULT 0,
   reply_to INTEGER,
   image TEXT,
-  date DATETIME DEFAULT CURRENT_TIMESTAMP,
+  date DATETIME DEFAULT (datetime(CURRENT_TIMESTAMP,'localtime')),
   FOREIGN KEY (reply_to) REFERENCES posts(id),
   FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
@@ -63,7 +63,7 @@ const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callbac
 
   // まず、対象となる投稿の全レコード数を取得する
   db.get(`
-      SELECT COUNT(*) AS total_count
+      SELECT COUNT(DISTINCT posts.id) AS total_count
       FROM posts
       INNER JOIN users ON posts.user_id = users.id
       LEFT JOIN relationships ON posts.user_id = relationships.followed_id
@@ -81,8 +81,13 @@ const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callbac
       SELECT posts.*, users.name, users.profile_image
       FROM posts
       INNER JOIN users ON posts.user_id = users.id
-      LEFT JOIN relationships ON posts.user_id = relationships.followed_id
-      WHERE (posts.user_id =? OR relationships.follower_id = ?)
+      WHERE (posts.user_id = ?)
+      UNION
+      SELECT posts.*, users.name, users.profile_image
+      FROM posts
+      INNER JOIN relationships ON posts.user_id = relationships.followed_id
+      INNER JOIN users ON posts.user_id = users.id
+      WHERE (relationships.follower_id = ?)
       ORDER BY posts.date DESC
       LIMIT ? OFFSET ?
       `,
@@ -93,6 +98,7 @@ const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callbac
           callback(err, null);
           return;
         }
+        console.log('totalCount:',totalCount);
         callback(null, rows, totalCount); //レコード数もコールバックの引数に渡す
       });
   })
