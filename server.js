@@ -40,6 +40,7 @@ const server = http.createServer((req, res) => {
   const maxPostCount = 5; // １ページに表示させる最大投稿数（ページネーション）
   const maxPostWordCount = 140; //ひとつの投稿の文字数制限
   const maxUserIdWordCount = 15; //ユーザ名の文字数制限
+  const fileSizeLimit = 1048576; //アップロードされる画像のファイルサイズを制限(バイト)
 
   //ルーティング
   if (req.method === 'GET') {
@@ -98,7 +99,7 @@ const server = http.createServer((req, res) => {
   } else if (req.method === 'POST') {
     switch (req.url) {
       case '/post':
-        postPostPage(req, res, sessions[sessionID].userID, maxPostWordCount);
+        postPostPage(req, res, sessions[sessionID].userID, maxPostWordCount, fileSizeLimit);
         break;
       case `/delete/post/${id}`:
         deletePost(req, res, id);

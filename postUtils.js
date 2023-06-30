@@ -13,7 +13,7 @@ const escapeHTML = (string) => {
 }
 
 // 投稿する！(POST)
-const postPostPage = (req, res, currentUserID, maxPostWordCount) => {
+const postPostPage = (req, res, currentUserID, maxPostWordCount, fileSizeLimit) => {
 
     //マルチパートフォームデータを処理するためのヘルパー関数たちを宣言
     function extractBoundary(contentType) {
@@ -68,6 +68,13 @@ const postPostPage = (req, res, currentUserID, maxPostWordCount) => {
             // 制限された最大文字数を超えた場合、DBに投入させません
             if (escapedKakikomi.length > maxPostWordCount) {
                 res.write(`<h2>投稿の文字数が${maxPostWordCount}字を超えています</h2>\n`);
+                footer(req, res);
+                return;
+            }
+
+            // 投稿された画像があり、かつその画像のサイズが指定された容量を超えた場合、サーバーに保存させないし、DBにも投入させません
+            if (image && Buffer.byteLength(image) > fileSizeLimit){
+                res.write(`<h2>投稿した画像のファイルサイズが${fileSizeLimit}biteを超えています</h2>\n`);
                 footer(req, res);
                 return;
             }
