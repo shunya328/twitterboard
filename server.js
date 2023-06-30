@@ -57,7 +57,7 @@ const server = http.createServer((req, res) => {
         userIndexPage(req, res, sessions[sessionID].userID);
         break;
       case `/users/${secondID}/${id}`:
-        showUserPagePagenation(req, res, secondID, id, 5); //最後の引数は、ひとつのページに表示する投稿数
+        showUserPagePagenation(req, res, sessions[sessionID].userID, secondID, id, 5); //最後の引数は、ひとつのページに表示する投稿数
         break;
       case '/post':
         postPage(req, res);

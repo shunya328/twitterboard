@@ -146,8 +146,8 @@ const userIndexPage = (req, res, currentUserID) => {
 }
 
 // ユーザ詳細画面（ページネーション機能あり）
-const showUserPagePagenation = (req, res, userID, currentPage, limit) => {
-  findUserByUserID(userID, (err, user) => {
+const showUserPagePagenation = (req, res, currentUserID, userID, currentPage, limit) => {
+  findUserByUserID(currentUserID, userID, (err, user) => {
     if (err) {
       console.error(err.message);
       return;
@@ -171,8 +171,19 @@ const showUserPagePagenation = (req, res, userID, currentPage, limit) => {
         } else {
           res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
         }
-        res.write(`<h2>${user.name}さんのタイムライン</h2><br>`);
-        res.write(`<h4>${user.profile}<h4><br>`);
+        // フォローするボタンの追加
+        if (user.is_following === 1) {
+          res.write('<span>フォロー済み</span>');
+          res.write(`<form action="/unfollow/${user.id}" method="post">`);
+          res.write('<button type="submit">フォロー解除</button>');
+          res.write('</form>');
+        } else if (user.id !== currentUserID) {
+          res.write(`<form action="/following/${user.id}" method="post">`);
+          res.write('<button type="submit">フォローする</button>');
+          res.write('</form>');
+        }
+        res.write(`<h2>${user.name}</h2>`);
+        res.write(`<h4>${user.profile}</h4>`);
         res.write("<h3>投稿がありません</h3>");
 
         footer(req, res);
@@ -187,8 +198,19 @@ const showUserPagePagenation = (req, res, userID, currentPage, limit) => {
       } else {
         res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
       }
-      res.write(`<h2>${posts[0].name}</h2><br>`);
-      res.write(`<h4>${posts[0].profile}</h4><br>`);
+      // フォローするボタンの追加
+      if (user.is_following === 1) {
+        res.write('<span>フォロー済み</span>');
+        res.write(`<form action="/unfollow/${user.id}" method="post">`);
+        res.write('<button type="submit">フォロー解除</button>');
+        res.write('</form>');
+      } else if (user.id !== currentUserID) {
+        res.write(`<form action="/following/${user.id}" method="post">`);
+        res.write('<button type="submit">フォローする</button>');
+        res.write('</form>');
+      }
+      res.write(`<h2>${user.name}</h2>`);
+      res.write(`<h4>${user.profile}</h4><br>`);
 
       res.write('<ul>');
       for (let row of posts) {

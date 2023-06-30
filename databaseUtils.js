@@ -97,7 +97,7 @@ const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callbac
           callback(err, null);
           return;
         }
-        console.log('totalCount:',totalCount);
+        console.log('totalCount:', totalCount);
         callback(null, rows, totalCount); //レコード数もコールバックの引数に渡す
       });
   })
@@ -435,10 +435,17 @@ const findUserSignUp = (userName, userEmail, userPassword, callback) => {
     });
 }
 
-// ユーザIDを使ってデータベースからユーザを検索する
-const findUserByUserID = (userID, callback) => {
-  db.all(`SELECT * FROM users WHERE id = ?`
-    , [userID], (err, rows) => {
+// ユーザIDを使ってデータベースからユーザを検索する(自身がフォローしているかどうかも取得)
+const findUserByUserID = (currentUserID, userID, callback) => {
+  db.all(`
+  SELECT users.*,
+  CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
+  FROM users
+  LEFT JOIN relationships
+  ON relationships.follower_id = ? AND relationships.followed_id = users.id
+  WHERE users.is_deleted = 0 AND users.id = ?
+  `
+    , [currentUserID, userID], (err, rows) => {
       if (err) {
         callback(err);
         return;
