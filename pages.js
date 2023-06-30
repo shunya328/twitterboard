@@ -290,7 +290,7 @@ const showPost = (req, res, postID, currentUserID) => {
       res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
       if (row.image) { res.write(`<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`); }
       res.write(`${row.date}<br>`);
-      if (row.user_id === currentUserID) {
+      if (row.user_id === currentUserID) { //もし投稿したユーザがログイン中ユーザなら、削除ボタンを表示
         res.write(`
           <form action="/delete/post/${row.id}" method="post">
             <button type="submit">投稿削除</button>

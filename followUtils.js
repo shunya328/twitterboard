@@ -40,8 +40,7 @@ const unfollowUser = (req, res, currentUserID, followedID) => {
             res.writeHead(302, { 'Location': previousPageURL });
             res.end(JSON.stringify({ message: 'フォローを解除しました' }));
             return;
-        }
-    )
+        });
 }
 
 // ログイン中のユーザがフォローしているユーザを取得

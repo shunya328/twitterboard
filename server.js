@@ -18,7 +18,7 @@ const server = http.createServer((req, res) => {
   console.log(`現在のcookieは、             →${sessionID}`);
   console.log(`現在のsessions[sessionID]は、→${sessions[sessionID]}`);
 
-  // 【セッションチェック】(サインインorサインアップページで無い時に、さらにセッションが無い時に)
+  // 【セッションチェック】(サインインorサインアップページじゃないページに飛ぼうとしたとき。さらにセッションが無い時に)
   if (req.url !== '/sign_in' && req.url !== '/sign_up' && !sessions[sessionID]) {
     // ログインしていない場合、サインインページにリダイレクト
     res.writeHead(302, { 'Location': '/sign_in' });
@@ -37,6 +37,9 @@ const server = http.createServer((req, res) => {
   const id = req.url.split('/').pop(); //URLの一番後ろのIDを取得
   const secondID = req.url.split('/')[req.url.split('/').length - 2]; //URLの後ろから二番目のIDを取得
   const urlQueryParam = req.url.split('?').pop(); //URLのクエリパラメータを取得
+  const maxPostCount = 5; // １ページに表示させる最大投稿数（ページネーション）
+  const maxPostWordCount = 140; //ひとつの投稿の文字数制限
+  const maxUserIdWordCount = 15; //ユーザ名の文字数制限
 
   //ルーティング
   if (req.method === 'GET') {
@@ -45,7 +48,7 @@ const server = http.createServer((req, res) => {
         topPage(req, res, sessions[sessionID].userID); //トップページ用の関数を呼んでいる
         break;
       case `/my_timeline/${id}`:
-        myTimeLinePagenation(req, res, sessions[sessionID].userID, id, 5); //最後の引数は、ひとつのページに表示する投稿数
+        myTimeLinePagenation(req, res, sessions[sessionID].userID, id, maxPostCount); //最後の引数は、ひとつのページに表示する投稿上限数
         break;
       case '/sign_up':
         signUpPage(req, res);
@@ -57,12 +60,12 @@ const server = http.createServer((req, res) => {
         userIndexPage(req, res, sessions[sessionID].userID);
         break;
       case `/users/${secondID}/${id}`:
-        showUserPagePagenation(req, res, sessions[sessionID].userID, secondID, id, 5); //最後の引数は、ひとつのページに表示する投稿数
+        showUserPagePagenation(req, res, sessions[sessionID].userID, secondID, id, maxPostCount); //最後の引数は、ひとつのページに表示する投稿上限数
         break;
       case '/post':
         postPage(req, res);
         break;
-      case `/post/${id}`: // 投稿詳細画面（ここでツリー表示）
+      case `/post/${id}`: // 投稿詳細画面（ここでリプライ表示）
         showPost(req, res, id, sessions[sessionID].userID);
         break;
       case '/mypage':
@@ -95,7 +98,7 @@ const server = http.createServer((req, res) => {
   } else if (req.method === 'POST') {
     switch (req.url) {
       case '/post':
-        postPostPage(req, res, sessions[sessionID].userID);
+        postPostPage(req, res, sessions[sessionID].userID, maxPostWordCount);
         break;
       case `/delete/post/${id}`:
         deletePost(req, res, id);
@@ -115,7 +118,7 @@ const server = http.createServer((req, res) => {
           .then((updateUser) => {
             if (updateUser) {
               console.log(`updatedUser = ${updateUser}`);
-              sessions[sessionID] = updateUser;
+              sessions[sessionID] = updateUser; //アップデートしたユーザの情報をセッションに投入
             }
           }).catch((error) => {
             // エラーハンドリング
@@ -124,8 +127,6 @@ const server = http.createServer((req, res) => {
         break;
       case '/mypage/withdrawal':
         postWithdrawalUser(req, res, sessions, sessionID);
-        console.log('sessionIDは、', sessionID);
-        console.log('sessionsは、', sessions[sessionID].userID);
         break;
       case `/following/${id}`:
         followingUser(req, res, sessions[sessionID].userID, id);
@@ -135,25 +136,6 @@ const server = http.createServer((req, res) => {
         break;
       default:
         notFoundPage(req, res);
-        break;
-    }
-  } else if (req.method === 'DELETE') {
-    switch (req.url) {
-      case `/posts/${id}`: //削除を実行
-        deletePost(id, (err) => {
-          if (err) {
-            console.error(err.message);
-            res.statusCode = 500;
-            res.end('削除時にエラーが発生しました');
-            return;
-          }
-          console.log('投稿を削除しました');
-          res.statusCode = 200;
-          res.end('削除が完了しました');
-        });
-        break;
-      default:
-        notFoundPage(req, res); //その他のリクエストをNot Foundページとして表示
         break;
     }
   }

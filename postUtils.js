@@ -13,7 +13,7 @@ const escapeHTML = (string) => {
 }
 
 // 投稿する！(POST)
-const postPostPage = (req, res, currentUserID) => {
+const postPostPage = (req, res, currentUserID, maxPostWordCount) => {
 
     //マルチパートフォームデータを処理するためのヘルパー関数たちを宣言
     function extractBoundary(contentType) {
@@ -53,8 +53,6 @@ const postPostPage = (req, res, currentUserID) => {
         const queryString = require('querystring');
         const parseBody = queryString.parse(body);
         body = Buffer.concat(body).toString('binary'); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。
-        // body = Buffer.concat(body,'binary').toString('utf-8'); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。
-
         // フォームデータの解析
         const contentType = req.headers['content-type'];
         const boundary = extractBoundary(contentType); // Content-Typeヘッダからマルチパートフォームデータの境界(boudary)を抽出する
@@ -66,6 +64,13 @@ const postPostPage = (req, res, currentUserID) => {
             const kakikomiToString = kakikomi ? Buffer.from(kakikomi, 'binary').toString('utf-8') : '';//ここで、バイナリデータを正しく文字列に変換(日本語に対応)
             // 投稿のXSS対策
             const escapedKakikomi = kakikomiToString ? escapeHTML(kakikomiToString) : '';
+
+            // 制限された最大文字数を超えた場合、DBに投入させません
+            if (escapedKakikomi.length > maxPostWordCount) {
+                res.write(`<h2>投稿の文字数が${maxPostWordCount}字を超えています</h2>\n`);
+                footer(req, res);
+                return;
+            }
 
             if (escapedKakikomi || image) { //文字、もしくは画像の投稿がある場合
                 insertPost(escapedKakikomi, image, reply_to, currentUserID)
@@ -90,8 +95,7 @@ const postPostPage = (req, res, currentUserID) => {
     });
 }
 
-
-//（UPDATEだがメソッドはPOST）プロフィール編集実行！
+//（UPDATEだが使ってるhttpメソッドはPOST）プロフィール編集実行！
 const updateEditProfilePage = (req, res, currentUser) => {
     return new Promise((resolve, reject) => {
 
@@ -130,7 +134,6 @@ const updateEditProfilePage = (req, res, currentUser) => {
         req.on('data', (chunk) => {
             body.push(chunk);
         }).on('end', () => {
-            // body = Buffer.concat(body).toString(); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。それをtoString()メソッドで文字列に変換しさらにbodyに格納
             //パースする。ここでは、queryString.parse()メソッドを使って、文字列などを解析し、オブジェクトとして返します。
             const queryString = require('querystring');
             const parseBody = queryString.parse(body);
@@ -207,7 +210,7 @@ const updateEditProfilePage = (req, res, currentUser) => {
                     footer(req, res);
                 });
             }
-        })
+        });
     });
 }
 
@@ -220,7 +223,7 @@ const postWithdrawalUser = (req, res, sessions, sessionID) => {
         }
         console.log(`userID=${sessions[sessionID].userID}のユーザが削除されました`);
         postLogout(req, res, sessions, sessionID);
-    })
+    });
 }
 
 module.exports = {

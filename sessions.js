@@ -2,10 +2,8 @@ const { header, footer, beforeLoginHeader } = require('./pageUtils');
 const { insertUser, findUserSignIn, findUserSignUp } = require('./databaseUtils');
 const { generateSessionID } = require('./generateSessionID');
 
-
 // セッションデータを保存するためのMapオブジェクト(グローバル変数)
 const sessions = {};
-
 
 // サインインの処理。POSTメソッド。
 const postSignInPage = (req, res) => {
@@ -143,7 +141,6 @@ const postSignUpPage = (req, res) => {
             const sessionID = generateSessionID(); //32桁のランダムな文字列を生成＆格納
 
             // セッションデータに必要な情報を保存
-            // sessions.set(sessionID, { userID: user.id, name: user.name, email: user.email, profile: user.profile });
             sessions[sessionID] = {
               userID: user.id,
               name: user.name,
@@ -172,7 +169,7 @@ const postSignUpPage = (req, res) => {
           footer(req, res);
           return;
         });
-      })
+      });
     }
   });
 }
