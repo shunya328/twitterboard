@@ -1,6 +1,6 @@
 const http = require('http');
-const { signUpPage, signInPage, topPage, myTimeLinePagenation, userIndexPage,showUserPagePagenation, postPage, showPost, myPage, editProfilePage, followingUserPage, followerUserPage, searchPage, searchUserResultPage, readImageFile, notFoundPage } = require('./pages');
-const {postPostPage, updateEditProfilePage, postWithdrawalUser} = require('./postUtils');
+const { signUpPage, signInPage, topPage, myTimeLinePagenation, userIndexPage, showUserPagePagenation, postPage, showPost, myPage, editProfilePage, followingUserPage, followerUserPage, searchPage, searchUserResultPage, readImageFile, notFoundPage } = require('./pages');
+const { postPostPage, updateEditProfilePage, postWithdrawalUser } = require('./postUtils');
 const { sessions, postSignInPage, postSignUpPage, postLogout } = require('./sessions');
 const { deletePost, db } = require('./databaseUtils');
 const { followingUser, unfollowUser } = require('./followUtils');
@@ -57,7 +57,7 @@ const server = http.createServer((req, res) => {
         userIndexPage(req, res, sessions[sessionID].userID);
         break;
       case `/users/${secondID}/${id}`:
-        showUserPagePagenation(req, res, secondID, id, 5);
+        showUserPagePagenation(req, res, secondID, id, 5); //最後の引数は、ひとつのページに表示する投稿数
         break;
       case '/post':
         postPage(req, res);
@@ -81,7 +81,7 @@ const server = http.createServer((req, res) => {
         searchPage(req, res);
         break;
       case `/search/users?${urlQueryParam}`: //ユーザ検索をした結果のページ
-        searchUserResultPage(req, res, urlQueryParam);
+        searchUserResultPage(req, res, sessions[sessionID].userID, urlQueryParam);
         break;
       default:
         // 画像ファイルを読み込む処理

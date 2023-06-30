@@ -41,38 +41,13 @@ const signInPage = (req, res) => {
 const topPage = (req, res, currentUserID) => {
   header(req, res);
 
-  //データベースから全データを取得
-  getAllPosts((err, posts) => {
-    if (err) {
-      console.error(err.message);
-      return;
-    }
+  res.write(`
+<h2>twitter的掲示板アプリ(仮)へようこそ！</h2>
+<h4>フォロー機能、投稿に対するリプライ機能をもった基本的な掲示板WEBアプリです</h4>
+`)
 
-    res.write('<h2>トップページ</h2>');
-    res.write('<ul>');
-    for (let row of posts) {
-      res.write('<li style="border:1px solid #888; padding: 1em">');
-      if (row.is_deleted === 0) {
-
-        if (row.profile_image) {
-          res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
-        } else {
-          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
-        }
-
-        res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
-        res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
-        if (row.image) { res.write(`<img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" />`); }
-        res.write(`${row.date}<br>`);
-      } else {
-        res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`)
-      }
-      res.write('</li>\n');
-    }
-    res.write('</ul>');
-    footer(req, res);
-    return;
-  })
+  footer(req, res);
+  return;
 }
 
 // 自分のタイムライン（ページネーション機能込み）
@@ -289,6 +264,7 @@ const showPost = (req, res, postID, currentUserID) => {
         res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
       }
       res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
+      if (row.reply_to) { res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`); }
       res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
       if (row.image) { res.write(`<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`); }
       res.write(`${row.date}<br>`);
@@ -416,7 +392,7 @@ const myPage = (req, res, currentUserID) => {
 const editProfilePage = (req, res, currentUser) => {
   header(req, res);
 
-  console.log('currentUser.profile:',currentUser.profile);
+  console.log('currentUser.profile:', currentUser.profile);
 
   res.write('<h2>プロフィール編集ページ</h2>\n');
   res.write('<form action="/mypage/edit_profile" method="post" enctype="multipart/form-data">')
@@ -541,9 +517,9 @@ const searchPage = (req, res) => {
 }
 
 // ユーザ検索の結果を返すページ
-const searchUserResultPage = (req, res, urlQueryParam) => {
+const searchUserResultPage = (req, res, currentUserID, urlQueryParam) => {
   const searchWord = urlQueryParam.split('keyword=').pop(); // urlQueryParamから検索ワードを抜き出す
-  findUserBySearchWord(searchWord, (err, users) => {
+  findUserBySearchWord(currentUserID, searchWord, (err, users) => {
     if (err) {
       // エラーハンドリング
       console.error(err);
@@ -561,14 +537,23 @@ const searchUserResultPage = (req, res, urlQueryParam) => {
 
     res.write('<ul>');
     for (let user of users) {
-      if (!user.is_deleted) {
-        res.write('<li>');
-        if (user.profile_image) {
-          res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
-        } else {
-          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
-        }
-        res.write(`<a href="/users/${user.id}/1">${user.name}</a>`);
+      res.write('<li>');
+      if (user.profile_image) {
+        res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+      } else {
+        res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+      }
+      res.write(`<a href="/users/${user.id}/1">${user.name}</a>`);
+      // フォローするボタンの追加
+      if (user.is_following === 1) {
+        res.write('<span>フォロー済み</span>');
+        res.write(`<form action="/unfollow/${user.id}" method="post">`);
+        res.write('<button type="submit">フォロー解除</button>');
+        res.write('</form>');
+      } else if (user.id !== currentUserID) {
+        res.write(`<form action="/following/${user.id}" method="post">`);
+        res.write('<button type="submit">フォローする</button>');
+        res.write('</form>');
       }
     }
     res.write('</ul>');

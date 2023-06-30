@@ -41,7 +41,6 @@ db.run(`CREATE TABLE IF NOT EXISTS relationships (
   UNIQUE (follower_id, followed_id)
 )`);
 
-
 //データベースから全投稿データを取得する関数（ついでにユーザデータも引っ張っています）
 const getAllPosts = (callback) => {
   db.all(`SELECT posts.id, posts.content, posts.is_deleted, posts.reply_to, posts.image, posts.date,
@@ -76,7 +75,7 @@ const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callbac
     }
     const totalCount = result.total_count; //レコード数をここに格納
 
-    // ページネーションに対応した、対象となる投稿だけを取得
+    // ページネーションに対応した、対象となる投稿だけを取得(自身とフォローしているユーザの投稿のみ取得)
     db.all(`
       SELECT posts.*, users.name, users.profile_image
       FROM posts
@@ -449,8 +448,14 @@ const findUserByUserID = (userID, callback) => {
 }
 
 // 検索ワードを使って、ユーザ名と突合し(あいまい検索)、データベースからユーザを検索する
-const findUserBySearchWord = (searchWord, callback) => {
-  db.all(`SELECT * FROM users WHERE name LIKE '%' || ? || '%'`, [searchWord], (err, rows) => {
+const findUserBySearchWord = (currentUserID, searchWord, callback) => {
+  db.all(`SELECT users.*,
+  CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
+  FROM users
+  LEFT JOIN relationships
+  ON relationships.follower_id = ? AND relationships.followed_id = users.id
+  WHERE users.is_deleted = 0 AND name LIKE '%' || ? || '%'
+  `, [currentUserID, searchWord], (err, rows) => {
     if (err) {
       console.error(err);
       callback(err, null);

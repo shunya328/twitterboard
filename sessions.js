@@ -80,7 +80,6 @@ const postSignUpPage = (req, res) => {
     const parseBody = queryString.parse(body);
 
     if (parseBody.user_name && parseBody.user_email && parseBody.user_password) {
-
       // ユーザ名のバリデーション
       const userNameRegex = /^[a-zA-Z0-9]+$/; // 半角英数字のみを許可する正規表現
       if (!userNameRegex.test(parseBody.user_name)) {
