@@ -20,12 +20,12 @@ const postSignInPage = (req, res) => {
     const parseBody = queryString.parse(body);
 
     //ユーザの検索
-    findUserSignIn(parseBody.user_name, parseBody.user_password, (err, user) => {
+    findUserSignIn(parseBody.user_name, parseBody.user_password, (err, user, isVerified) => {
       if (err) {
         console.error(err.message);
         return;
       }
-      if (user && user.is_deleted === 0) {
+      if (user && user.is_deleted === 0 && isVerified) {
         console.log(user);
 
         // ログイン成功時にセッションIDを生成
@@ -54,7 +54,7 @@ const postSignInPage = (req, res) => {
       } else {
         beforeLoginHeader(req, res);
         res.write('<h2>サインインに失敗しました</h2>');
-        if (user && user.is_deleted === 1) { res.write('ユーザは削除されています<br>'); }
+        if (user && user.is_deleted === 1 && isVerified) { res.write('ユーザは削除されています<br>'); }
         res.write('<a href="/sign_in">再度サインインする</a><br>');
         res.write('<a href="/sign_up">新規登録</a>');
       }

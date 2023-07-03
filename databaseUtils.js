@@ -6,6 +6,29 @@ const db = new sqlite3.Database('twitterboardDatabase.db')//sqliteデータベ�
 const fs = require('fs');
 const path = require('path');
 const { generateSessionID } = require('./generateSessionID'); //ランダムな文字列を生み出す関数
+// cryptoモジュールの取り込み
+const crypto = require('crypto');
+
+// パスワードのハッシュ化とソルト生成を行う関数
+const hashPasswordWithSalt = (password) => {
+  const salt = crypto.randomBytes(16).toString('hex'); //ランダムなソルト値を生成
+  const hashedPassword = crypto
+    .createHmac('sha256', salt) //SHA-256ハッシュ関数を利用
+    .update(password)
+    .digest('hex');
+
+  return { hashedPassword, salt };
+}
+
+// パスワードの検証
+const verifyPassword = (inputPassword, storedPassword, salt) => {
+  const hashedInputPassword = crypto
+    .createHmac('sha256', salt)
+    .update(inputPassword)
+    .digest('hex');
+
+  return hashedInputPassword === storedPassword;
+}
 
 //postsテーブルの作成
 db.run(`CREATE TABLE IF NOT EXISTS posts (
@@ -28,8 +51,9 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
   password TEXT NOT NULL ,
   profile TEXT DEFAULT '',
   profile_image TEXT,
-  is_deleted INTEGER DEFAULT 0
-)`)
+  is_deleted INTEGER DEFAULT 0,
+  salt TEXT NOT NULL
+)`);
 
 //relationshipsテーブルの作成
 db.run(`CREATE TABLE IF NOT EXISTS relationships (
@@ -268,6 +292,9 @@ const deletePost = (req, res, postID) => {
 
 //データベースに新たにユーザ情報を登録する関数
 const insertUser = (userName, userEmail, userPassword, callback) => {
+  //パスワードをハッシュ化し、ソルト値も取得
+  const { hashedPassword, salt } = hashPasswordWithSalt(userPassword);
+
   //じつはこのオブジェクトの宣言なくてもうまく動く気がする
   const isUserNameDuplicate = { value: false };
   const isUserEmailDuplicate = { value: false };
@@ -303,9 +330,9 @@ const insertUser = (userName, userEmail, userPassword, callback) => {
   //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを新規登録
   if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
     db.run(`INSERT INTO users (
-    name, email, password
-  ) VALUES (?, ?, ?)`,
-      [userName, userEmail, userPassword], (err) => {
+    name, email, password, salt
+  ) VALUES (?, ?, ?, ?)`,
+      [userName, userEmail, hashedPassword, salt], (err) => {
         if (err) {
           callback(err);
           return;
@@ -317,6 +344,9 @@ const insertUser = (userName, userEmail, userPassword, callback) => {
 
 //データベース上のユーザ情報を変更する関数
 const updateUser = (userID, userName, userEmail, userPassword, userProfile, userImage, callback) => {
+  //パスワードをハッシュ化し、ソルト値も取得
+  const { hashedPassword, salt } = userPassword ? hashPasswordWithSalt(userPassword) : '';
+
   const isUserNameDuplicate = { value: false };
   const isUserEmailDuplicate = { value: false };
   console.log('updateUserは回っているみたいinupdateUser')
@@ -351,6 +381,7 @@ const updateUser = (userID, userName, userEmail, userPassword, userProfile, user
 
   //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを更新
   if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
+
     //データの書き込み
     if (userName) {
       db.run(`UPDATE users SET name = ? WHERE id = ?`,
@@ -372,9 +403,9 @@ const updateUser = (userID, userName, userEmail, userPassword, userProfile, user
           callback(null);
         });
     }
-    if (userPassword) {
-      db.run(`UPDATE users SET password = ? WHERE id = ?`,
-        [userPassword, userID], (err) => {
+    if (hashedPassword) {
+      db.run(`UPDATE users SET password = ?, salt = ? WHERE id = ?`,
+        [hashedPassword, salt, userID], (err) => {
           if (err) {
             callback(err);
             return;
@@ -414,21 +445,23 @@ const updateUser = (userID, userName, userEmail, userPassword, userProfile, user
 }
 
 //データベースからユーザを検索する関数(サインインのとき)
-const findUserSignIn = (userName, userPassword, callback) => {
-  db.all(`SELECT * FROM users WHERE name = ? AND password = ?`,
-    [userName, userPassword], (err, rows) => {
+const findUserSignIn = (userName, inputPassword, callback) => {
+  db.all(`SELECT * FROM users WHERE name = ?`,
+    [userName], (err, rows) => {
       if (err) {
         callback(err);
         return;
       }
-      callback(null, rows[0]);
+      const isVerified = rows[0] ? verifyPassword(inputPassword, rows[0].password, rows[0].salt) : null;
+
+      callback(null, rows[0], isVerified);
     });
 }
 
 //データベースからユーザを検索する（サインアップのとき）
 const findUserSignUp = (userName, userEmail, userPassword, callback) => {
-  db.all(`SELECT * FROM users WHERE name = ? AND email = ? AND password = ?`,
-    [userName, userEmail, userPassword], (err, rows) => {
+  db.all(`SELECT * FROM users WHERE name = ? AND email = ?`,
+    [userName, userEmail], (err, rows) => {
       if (err) {
         callback(err);
         return;
