@@ -363,85 +363,86 @@ const updateUser = (userID, userName, userEmail, userPassword, userProfile, user
       isUserNameDuplicate.value = true;
       return;
     }
+
+    //メールアドレスの重複チェック
+    db.get('SELECT COUNT (*) AS count FROM users WHERE email = ? AND id != ?', [userEmail, userID], (err, row) => {
+      if (err) {
+        callback(err);
+        return;
+      }
+      if (row.count > 0) {
+        const error = new Error('同じメールアドレスが既に存在しています');
+        callback(error);
+        isUserEmailDuplicate.value = true;
+        return;
+      }
+
+      //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを更新
+      if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
+
+        //データの書き込み
+        if (userName) {
+          db.run(`UPDATE users SET name = ? WHERE id = ?`,
+            [userName, userID], (err) => {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null);
+            });
+        }
+        if (userEmail) {
+          db.run(`UPDATE users SET email = ? WHERE id = ?`,
+            [userEmail, userID], (err) => {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null);
+            });
+        }
+        if (hashedPassword) {
+          db.run(`UPDATE users SET password = ?, salt = ? WHERE id = ?`,
+            [hashedPassword, salt, userID], (err) => {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null);
+            });
+        }
+        if (userProfile) {
+          db.run(`UPDATE users SET profile = ? WHERE id = ?`,
+            [userProfile, userID], (err) => {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null);
+            });
+        }
+        if (userImage) {
+          //　画像の前準備
+          const fileName = generateSessionID() + '.jpg'; //ランダムな文字列を画像の名前にする
+          fs.mkdirSync(path.join(__dirname, 'public', 'user_images'), { recursive: true }); //保存先ディレクトリがない場合、作る
+          const imagePath = path.join(__dirname, 'public', 'user_images', fileName); //画像の保存先
+          fs.writeFileSync(imagePath, userImage, 'binary') //画像を保存する
+          // "/public/user_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
+          const imagePathInDB = imagePath.replace(/.*\/public\//, '/public/');
+
+          db.run(`UPDATE users SET profile_image = ? WHERE id = ?`,
+            [imagePathInDB, userID], (err) => {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null);
+            });
+        }
+      }
+
+    });
   });
-
-  //メールアドレスの重複チェック
-  db.get('SELECT COUNT (*) AS count FROM users WHERE email = ? AND id != ?', [userEmail, userID], (err, row) => {
-    if (err) {
-      callback(err);
-      return;
-    }
-    if (row.count > 0) {
-      const error = new Error('同じメールアドレスが既に存在しています');
-      callback(error);
-      isUserEmailDuplicate.value = true;
-      return;
-    }
-  });
-
-  //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを更新
-  if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
-
-    //データの書き込み
-    if (userName) {
-      db.run(`UPDATE users SET name = ? WHERE id = ?`,
-        [userName, userID], (err) => {
-          if (err) {
-            callback(err);
-            return;
-          }
-          callback(null);
-        });
-    }
-    if (userEmail) {
-      db.run(`UPDATE users SET email = ? WHERE id = ?`,
-        [userEmail, userID], (err) => {
-          if (err) {
-            callback(err);
-            return;
-          }
-          callback(null);
-        });
-    }
-    if (hashedPassword) {
-      db.run(`UPDATE users SET password = ?, salt = ? WHERE id = ?`,
-        [hashedPassword, salt, userID], (err) => {
-          if (err) {
-            callback(err);
-            return;
-          }
-          callback(null);
-        });
-    }
-    if (userProfile) {
-      db.run(`UPDATE users SET profile = ? WHERE id = ?`,
-        [userProfile, userID], (err) => {
-          if (err) {
-            callback(err);
-            return;
-          }
-          callback(null);
-        });
-    }
-    if (userImage) {
-      //　画像の前準備
-      const fileName = generateSessionID() + '.jpg'; //ランダムな文字列を画像の名前にする
-      fs.mkdirSync(path.join(__dirname, 'public', 'user_images'), { recursive: true }); //保存先ディレクトリがない場合、作る
-      const imagePath = path.join(__dirname, 'public', 'user_images', fileName); //画像の保存先
-      fs.writeFileSync(imagePath, userImage, 'binary') //画像を保存する
-      // "/public/user_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
-      const imagePathInDB = imagePath.replace(/.*\/public\//, '/public/');
-
-      db.run(`UPDATE users SET profile_image = ? WHERE id = ?`,
-        [imagePathInDB, userID], (err) => {
-          if (err) {
-            callback(err);
-            return;
-          }
-          callback(null);
-        });
-    }
-  }
 }
 
 //データベースからユーザを検索する関数(サインインのとき)
