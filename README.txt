@@ -1,7 +1,8 @@
 # twitterboard
+
+git pull したら、npm installをしてください。
+
 node ./server.js 
-をコンソールで打ち込み、
+をコンソールで打ち込み、サーバーを立ち上げた後
 http://localhost:3000
-もしくは
-http://127.0.0.1:3000
 に接続してください。
