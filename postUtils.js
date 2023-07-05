@@ -1,5 +1,5 @@
 const { header, footer } = require('./pageUtils');
-const { insertPost, updateUser, withdrawalUser, deletePost } = require('./databaseUtils');
+const { updateSession, insertPost, updateUser, withdrawalUser, deletePost } = require('./databaseUtils');
 const { postLogout } = require('./sessions');
 
 // XSS(クロスサイトスクリプティング)対策
@@ -201,10 +201,11 @@ const updateEditProfilePage = (req, res, currentUser, maxUserIdWordCount) => {
 
                     console.log('updateUserは回っているみたい')
                     const newProfile = {
-                        userID: currentUser.user_id,
+                        user_id: currentUser.user_id,
                         name: (userNameToString ? userNameToString : currentUser.name),
                         email: (userEmailToString ? userEmailToString : currentUser.email),
-                        profile: (userProfileToString ? userProfileToString : currentUser.profile)
+                        profile: (userProfileToString ? userProfileToString : currentUser.profile),
+                        profile_image: (user_image ? user_image : currentUser.profile_image)
                     };
 
                     console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);

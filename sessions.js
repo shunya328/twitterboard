@@ -10,7 +10,7 @@ const { generateSessionID } = require("./generateSessionID");
 
 // セッションデータを保存するためのMapオブジェクト(グローバル変数)
 // これは良くない実装なので、そのうち削除
-const sessions = {};
+// const sessions = {};
 
 // サインインの処理。POSTメソッド。
 const postSignInPage = (req, res) => {
@@ -43,12 +43,12 @@ const postSignInPage = (req, res) => {
             const sessionID = generateSessionID(); //32桁のランダムな文字列を生成＆格納
 
             // セッションデータに必要な情報を保存
-            sessions[sessionID] = {
-              userID: user.id,
-              name: user.name,
-              email: user.email,
-              profile: user.profile,
-            };
+            // sessions[sessionID] = {
+            //   userID: user.id,
+            //   name: user.name,
+            //   email: user.email,
+            //   profile: user.profile,
+            // };
             // sessionsテーブルにセッション情報を格納
             setSession(
               sessionID,
@@ -67,7 +67,7 @@ const postSignInPage = (req, res) => {
                 );
               }
             );
-            console.log(`sessionsは、${sessions[sessionID].name}`);
+            // console.log(`sessionsは、${sessions[sessionID].name}`);
             console.log(`userIDは、${user.id}`);
 
             // セッションIDをクライアントに送信(cookie)
@@ -194,15 +194,31 @@ const postSignUpPage = (req, res, maxUserIdWordCount) => {
                   const sessionID = generateSessionID(); //32桁のランダムな文字列を生成＆格納
 
                   // セッションデータに必要な情報を保存
-                  sessions[sessionID] = {
-                    userID: user.id,
-                    name: user.name,
-                    email: user.email,
-                    profile: user.profile,
-                  };
-                  console.log(
-                    `sessions[sessionID].nameは、${sessions[sessionID].name}`
+                  // sessions[sessionID] = {
+                  //   userID: user.id,
+                  //   name: user.name,
+                  //   email: user.email,
+                  //   profile: user.profile,
+                  // };
+                  setSession(
+                    sessionID,
+                    user.id,
+                    user.name,
+                    user.email,
+                    user.profile,
+                    user.profile_image,
+                    (err) => {
+                      if (err) {
+                        console.error(err.message);
+                        return;
+                      }
+                      console.log(
+                        "無事セッション情報がsessionsテーブルに保存されました"
+                      );
+                    }
                   );
+
+                  // console.log(`sessions[sessionID].nameは、${sessions[sessionID].name}`);
                   console.log(`userIDは、${user.id}`);
 
                   // セッションIDをクライアントに送信(cookie)
@@ -234,11 +250,11 @@ const postSignUpPage = (req, res, maxUserIdWordCount) => {
 };
 
 // ログアウトのPOSTメソッド
-const postLogout = (req, res, sessions, sessionID) => {
+const postLogout = (req, res, sessionID) => {
   // セッションIDが存在する場合、セッションを削除(ここの実装は悪なので、そのうち消します)
-  if (sessionID && sessions[sessionID]) {
-    delete sessions[sessionID];
-  }
+  // if (sessionID && sessions[sessionID]) {
+  //   delete sessions[sessionID];
+  // }
 
   // セッションIDでsessionsテーブルと突合し、該当のレコードを削除
   deleteSession(sessionID, (err) => {
@@ -257,7 +273,7 @@ const postLogout = (req, res, sessions, sessionID) => {
 };
 
 module.exports = {
-  sessions,
+  // sessions,
   postSignInPage,
   postSignUpPage,
   postLogout,

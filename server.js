@@ -23,12 +23,17 @@ const {
   postWithdrawalUser,
 } = require("./postUtils");
 const {
-  sessions,
+  // sessions,
   postSignInPage,
   postSignUpPage,
   postLogout,
 } = require("./sessions");
-const { searchSession, deletePost, db } = require("./databaseUtils");
+const {
+  searchSession,
+  updateSession,
+  deletePost,
+  db,
+} = require("./databaseUtils");
 const { followingUser, unfollowUser } = require("./followUtils");
 
 const hostname = "0.0.0.0";
@@ -44,8 +49,8 @@ const server = http.createServer((req, res) => {
   const sessionID = req.headers.cookie
     ? req.headers.cookie.split("=")[1]
     : null;
-  console.log(`現在のcookieは、             →${sessionID}`);
-  console.log(`現在のsessions[sessionID]は、→${sessions[sessionID]}`);
+  console.log(`現在のcookieは→ ${sessionID}`);
+  // console.log(`現在のsessions[sessionID]は、→${sessions[sessionID]}`);
 
   // ここで、ユーザのクッキーに保存されているセッションIDを、sessionsテーブルと突合
   searchSession(sessionID, (err, sessionRecord) => {
@@ -53,15 +58,10 @@ const server = http.createServer((req, res) => {
       console.error(err.message);
       return;
     }
-    const currentSession = sessionRecord;
-    console.log("currentSession:", currentSession);
+    const currentSession = sessionRecord; //セッションの情報を格納
 
     // 【セッションチェック】(サインインorサインアップページじゃないページに飛ぼうとしたとき。さらにセッションが無い時に)
-    if (
-      req.url !== "/sign_in" &&
-      req.url !== "/sign_up" &&
-      !currentSession
-    ) {
+    if (req.url !== "/sign_in" && req.url !== "/sign_up" && !currentSession) {
       // ログインしていない場合、サインインページにリダイレクト
       res.writeHead(302, { Location: "/sign_in" });
       res.end();
@@ -69,10 +69,7 @@ const server = http.createServer((req, res) => {
     }
 
     // 【セッションチェック】逆に、サインインしている状態であれば、サインイン・サインアップページに飛ばないようにする。
-    if (
-      (req.url === "/sign_in" || req.url === "/sign_up") &&
-      currentSession
-    ) {
+    if ((req.url === "/sign_in" || req.url === "/sign_up") && currentSession) {
       // トップページにリダイレクト
       res.writeHead(302, { Location: "/" });
       res.end();
@@ -148,12 +145,7 @@ const server = http.createServer((req, res) => {
           searchPage(req, res);
           break;
         case `/search/users?${urlQueryParam}`: //ユーザ検索をした結果のページ
-          searchUserResultPage(
-            req,
-            res,
-            currentSession.user_id,
-            urlQueryParam
-          );
+          searchUserResultPage(req, res, currentSession.user_id, urlQueryParam);
           break;
         default:
           // 画像ファイルを読み込む処理
@@ -185,20 +177,21 @@ const server = http.createServer((req, res) => {
           postSignInPage(req, res);
           break;
         case "/logout": //ログアウトをする
-          postLogout(req, res, sessions, sessionID);
+          postLogout(req, res, sessionID);
           break;
         case "/mypage/edit_profile": //自分のユーザ情報を変更する
           // updateEditProfilePageをPromiseで実行
-          updateEditProfilePage(
-            req,
-            res,
-            currentSession,
-            maxUserIdWordCount
-          )
+          updateEditProfilePage(req, res, currentSession, maxUserIdWordCount)
             .then((updateUser) => {
               if (updateUser) {
                 console.log(`updatedUser = ${updateUser}`);
-                sessions[sessionID] = updateUser; //アップデートしたユーザの情報をセッションに投入
+                // sessions[sessionID] = updateUser; //アップデートしたユーザの情報をセッションに投入
+                updateSession(sessionID, updateUser, (err) => {
+                  if (err) {
+                    console.error(err);
+                    return;
+                  }
+                });
               }
             })
             .catch((error) => {

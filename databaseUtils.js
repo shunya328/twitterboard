@@ -144,6 +144,32 @@ const deleteSession = (sessionID, callback) => {
   );
 };
 
+//受け取ったセッションIDのレコードを探し、アップデートする
+const updateSession = (sessionID, newUserProfile, callback) => {
+  const { user_id, name, email, profile, profile_image } =
+    newUserProfile;
+  db.run(
+    `
+UPDATE sessions SET user_id = ?, name = ?, email = ?, profile = ?, profile_image = ? WHERE session_id = ?
+`,
+    [
+      user_id,
+      name,
+      email,
+      profile,
+      profile_image,
+      sessionID,
+    ],
+    (err) => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      callback(null);
+    }
+  );
+};
+
 //データベースから全投稿データを取得する関数（ついでにユーザデータも引っ張っています）
 const getAllPosts = (callback) => {
   db.all(
@@ -725,6 +751,7 @@ module.exports = {
   setSession,
   searchSession,
   deleteSession,
+  updateSession,
   getAllPosts,
   getMyTimelinePostsPagenation,
   getAllPostOfUser,
