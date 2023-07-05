@@ -9,7 +9,7 @@ const escapeHTML = (string) => {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, "&#x27;")
-        .replace(/`/g, '&#x60;');;
+        .replace(/`/g, '&#x60;');
 }
 
 // 投稿する！(POST)
@@ -52,8 +52,8 @@ const postPostPage = (req, res, currentUserID, maxPostWordCount, fileSizeLimit) 
     }).on('end', () => {
         const queryString = require('querystring');
         const parseBody = queryString.parse(body);
-        body = Buffer.concat(body).toString('binary'); //Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。
-        // フォームデータの解析
+        body = Buffer.concat(body).toString('binary'); 
+        // フォームデータの解析//Buffer.concat()メソッドで複数のBufferオブジェクト(body)を結合し新たなBufferオブジェクトを生成。
         const contentType = req.headers['content-type'];
         const boundary = extractBoundary(contentType); // Content-Typeヘッダからマルチパートフォームデータの境界(boudary)を抽出する
 
@@ -83,7 +83,7 @@ const postPostPage = (req, res, currentUserID, maxPostWordCount, fileSizeLimit) 
                 insertPost(escapedKakikomi, image, reply_to, currentUserID)
                     .then((imagePath) => {
                         res.write('<h2>ツイート（文字）投稿しました</h2>\n');
-                        res.write(`投稿内容: ${decodeURIComponent(escapedKakikomi)}`);
+                        res.write(`投稿内容: ${decodeURIComponent(escapedKakikomi)}`); //ここ脆弱性！
                         res.write('<h2>ツイート（画像）投稿しました</h2>\n');
                         res.write(`画像パス: ${imagePath}`);
                         footer(req, res);
@@ -188,7 +188,7 @@ const updateEditProfilePage = (req, res, currentUser, maxUserIdWordCount) => {
                 }
 
                 // 現在ログインしているユーザの情報をアップデート
-                updateUser(currentUser.userID, userNameToString, userEmailToString, userPasswordToString, userProfileToString, user_image, (err) => {
+                updateUser(currentUser.user_id, userNameToString, userEmailToString, userPasswordToString, userProfileToString, user_image, (err) => {
                     if (err) {
                         console.log('updateUserは回っているみたいinERROR')
                         console.error(err.message);
@@ -201,7 +201,7 @@ const updateEditProfilePage = (req, res, currentUser, maxUserIdWordCount) => {
 
                     console.log('updateUserは回っているみたい')
                     const newProfile = {
-                        userID: currentUser.userID,
+                        userID: currentUser.user_id,
                         name: (userNameToString ? userNameToString : currentUser.name),
                         email: (userEmailToString ? userEmailToString : currentUser.email),
                         profile: (userProfileToString ? userProfileToString : currentUser.profile)
@@ -209,7 +209,6 @@ const updateEditProfilePage = (req, res, currentUser, maxUserIdWordCount) => {
 
                     console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
                     res.write('<h2>プロフィールは更新されました</h2>');
-                    // footer(req, res);
 
                     // サーバ側のセッション情報を返り値に
                     resolve(newProfile); // resolveの引数に渡す

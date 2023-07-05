@@ -38,7 +38,7 @@ const signInPage = (req, res) => {
 }
 
 // トップページ
-const topPage = (req, res, currentUserID) => {
+const topPage = (req, res) => {
   header(req, res);
 
   res.write(`
