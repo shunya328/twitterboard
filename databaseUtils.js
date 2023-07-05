@@ -12,20 +12,38 @@ const crypto = require("crypto");
 // パスワードのハッシュ化とソルト生成を行う関数
 const hashPasswordWithSalt = (password) => {
   const salt = crypto.randomBytes(16).toString("hex"); //ランダムなソルト値を生成
-  const hashedPassword = crypto
-    .createHmac("sha256", salt) //SHA-256ハッシュ関数を利用
-    .update(password)
-    .digest("hex");
+  let hashedPassword = password;
+
+  //一万回ストレッチングします
+  for (let i = 0; i < 10000; i++) {
+    hashedPassword = crypto
+      .createHmac("sha256", salt) //SHA-256ハッシュ関数を利用
+      .update(hashedPassword)
+      .digest("hex");
+  }
+  // const hashedPassword = crypto
+  //   .createHmac("sha256", salt) //SHA-256ハッシュ関数を利用
+  //   .update(password)
+  //   .digest("hex");
 
   return { hashedPassword, salt };
 };
 
 // パスワードの検証
 const verifyPassword = (inputPassword, storedPassword, salt) => {
-  const hashedInputPassword = crypto
-    .createHmac("sha256", salt)
-    .update(inputPassword)
-    .digest("hex");
+  let hashedInputPassword = inputPassword;
+
+  //一万回ストレッチングします
+  for (let i = 0; i < 10000; i++) {
+    hashedInputPassword = crypto
+      .createHmac("sha256", salt)
+      .update(hashedInputPassword)
+      .digest("hex");
+  }
+  // const hashedInputPassword = crypto
+  //   .createHmac("sha256", salt)
+  //   .update(inputPassword)
+  //   .digest("hex");
 
   return hashedInputPassword === storedPassword;
 };
@@ -146,12 +164,12 @@ const deleteSession = (sessionID, callback) => {
 
 //受け取ったセッションIDのレコードを探し、アップデートする
 const updateSession = (sessionID, newUserProfile, callback) => {
-  const { user_id, name, email, profile, profile_image } = newUserProfile;
+  const { user_id, name, email, profile } = newUserProfile;
   db.run(
     `
-UPDATE sessions SET user_id = ?, name = ?, email = ?, profile = ?, profile_image = ? WHERE session_id = ?
+UPDATE sessions SET user_id = ?, name = ?, email = ?, profile = ? WHERE session_id = ?
 `,
-    [user_id, name, email, profile, profile_image, sessionID],
+    [user_id, name, email, profile, sessionID],
     (err) => {
       if (err) {
         console.error(err);
@@ -417,7 +435,10 @@ const getReplyPost = (req, res, postID, callback) => {
 
 //データベースの特定の投稿を削除する関数(論理削除)
 const deletePost = (req, res, postID, currentUserID) => {
-    db.run(`UPDATE posts SET is_deleted = 1 WHERE id = ? AND user_id = ?`, [postID, currentUserID], (err) => {
+  db.run(
+    `UPDATE posts SET is_deleted = 1 WHERE id = ? AND user_id = ?`,
+    [postID, currentUserID],
+    (err) => {
       if (err) {
         console.error(err.message);
         // エラーハンドリングを行う
@@ -427,11 +448,12 @@ const deletePost = (req, res, postID, currentUserID) => {
       }
       // 現在のページにリダイレクト（直前のリクエストのURLにリダイレクト）
       const previousPageURL = req.headers.referer;
-      console.log('deletePostが回りました')
+      console.log("deletePostが回りました");
       res.writeHead(302, { Location: previousPageURL });
       // res.end(JSON.stringify({ message: "投稿を削除しました" }));
       return;
-    });
+    }
+  );
 };
 
 //データベースに新たにユーザ情報を登録する関数
@@ -458,43 +480,41 @@ const insertUser = (userName, userEmail, userPassword, callback) => {
         isUserNameDuplicate.value = true;
         return;
       }
-    }
-  );
-
-  //メールアドレスの重複チェック
-  db.get(
-    "SELECT COUNT (*) AS count FROM users WHERE email = ?",
-    [userEmail],
-    (err, row) => {
-      if (err) {
-        callback(err);
-        return;
-      }
-      if (row.count > 0) {
-        const error = new Error("同じメールアドレスが既に存在しています");
-        callback(error);
-        isUserEmailDuplicate.value = true;
-        return;
-      }
-    }
-  );
-
-  //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを新規登録
-  if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
-    db.run(
-      `INSERT INTO users (
-    name, email, password, salt
-  ) VALUES (?, ?, ?, ?)`,
-      [userName, userEmail, hashedPassword, salt],
-      (err) => {
-        if (err) {
-          callback(err);
-          return;
+      //メールアドレスの重複チェック
+      db.get(
+        "SELECT COUNT (*) AS count FROM users WHERE email = ?",
+        [userEmail],
+        (err, row) => {
+          if (err) {
+            callback(err);
+            return;
+          }
+          if (row.count > 0) {
+            const error = new Error("同じメールアドレスが既に存在しています");
+            callback(error);
+            isUserEmailDuplicate.value = true;
+            return;
+          }
+          //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを新規登録
+          if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
+            db.run(
+              `INSERT INTO users (
+              name, email, password, salt
+              ) VALUES (?, ?, ?, ?)`,
+              [userName, userEmail, hashedPassword, salt],
+              (err) => {
+                if (err) {
+                  callback(err);
+                  return;
+                }
+                callback(null);
+              }
+            );
+          }
         }
-        callback(null);
-      }
-    );
-  }
+      );
+    }
+  );
 };
 
 //データベース上のユーザ情報を変更する関数

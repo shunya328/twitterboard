@@ -67,7 +67,6 @@ const postSignInPage = (req, res) => {
                 );
               }
             );
-            // console.log(`sessionsは、${sessions[sessionID].name}`);
             console.log(`userIDは、${user.id}`);
 
             // セッションIDをクライアントに送信(cookie)

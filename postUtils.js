@@ -206,7 +206,6 @@ const updateEditProfilePage = (req, res, currentUser, maxUserIdWordCount) => {
                         name: (userNameToString ? userNameToString : currentUser.name),
                         email: (userEmailToString ? userEmailToString : currentUser.email),
                         profile: (userProfileToString ? userProfileToString : currentUser.profile),
-                        profile_image: (user_image ? user_image : currentUser.profile_image)
                     };
 
                     console.log(`updateEditProfilePage()の中のnewProfile = ${JSON.stringify(newProfile)}`);
