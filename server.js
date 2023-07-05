@@ -200,7 +200,7 @@ const server = http.createServer((req, res) => {
             });
           break;
         case "/mypage/withdrawal": //退会する
-          postWithdrawalUser(req, res, sessions, sessionID);
+          postWithdrawalUser(req, res, currentSession, sessionID);
           break;
         case `/following/${id}`: //任意のユーザをフォローする
           followingUser(req, res, currentSession.user_id, id);

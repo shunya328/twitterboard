@@ -83,7 +83,8 @@ const postPostPage = (req, res, currentUserID, maxPostWordCount, fileSizeLimit) 
                 insertPost(escapedKakikomi, image, reply_to, currentUserID)
                     .then((imagePath) => {
                         res.write('<h2>ツイート（文字）投稿しました</h2>\n');
-                        res.write(`投稿内容: ${decodeURIComponent(escapedKakikomi)}`); //ここ脆弱性！
+                        // res.write(`投稿内容: ${decodeURIComponent(escapedKakikomi)}`); //ここ脆弱性！
+                        res.write(`投稿内容: ${escapedKakikomi}`); //変にURLデコードする必要はない
                         res.write('<h2>ツイート（画像）投稿しました</h2>\n');
                         res.write(`画像パス: ${imagePath}`);
                         footer(req, res);
@@ -221,14 +222,14 @@ const updateEditProfilePage = (req, res, currentUser, maxUserIdWordCount) => {
 }
 
 // （POST）ユーザを論理削除する関数
-const postWithdrawalUser = (req, res, sessions, sessionID) => {
-    withdrawalUser(sessions[sessionID].userID, (err) => {
+const postWithdrawalUser = (req, res, currentSession, sessionID) => {
+    withdrawalUser(currentSession.user_id, (err) => {
         if (err) {
             console.error(err);
             return;
         }
-        console.log(`userID=${sessions[sessionID].userID}のユーザが削除されました`);
-        postLogout(req, res, sessions, sessionID);
+        console.log(`userID=${currentSession.user_id}のユーザが削除されました`);
+        postLogout(req, res, sessionID);
     });
 }
 
