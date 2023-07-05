@@ -168,7 +168,7 @@ const server = http.createServer((req, res) => {
           );
           break;
         case `/delete/post/${id}`: //任意の投稿を削除する
-          deletePost(req, res, id);
+          deletePost(req, res, id, currentSession.user_id);
           break;
         case "/sign_up": //サインアップをする
           postSignUpPage(req, res, maxUserIdWordCount);

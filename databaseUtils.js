@@ -146,20 +146,12 @@ const deleteSession = (sessionID, callback) => {
 
 //受け取ったセッションIDのレコードを探し、アップデートする
 const updateSession = (sessionID, newUserProfile, callback) => {
-  const { user_id, name, email, profile, profile_image } =
-    newUserProfile;
+  const { user_id, name, email, profile, profile_image } = newUserProfile;
   db.run(
     `
 UPDATE sessions SET user_id = ?, name = ?, email = ?, profile = ?, profile_image = ? WHERE session_id = ?
 `,
-    [
-      user_id,
-      name,
-      email,
-      profile,
-      profile_image,
-      sessionID,
-    ],
+    [user_id, name, email, profile, profile_image, sessionID],
     (err) => {
       if (err) {
         console.error(err);
@@ -424,21 +416,22 @@ const getReplyPost = (req, res, postID, callback) => {
 };
 
 //データベースの特定の投稿を削除する関数(論理削除)
-const deletePost = (req, res, postID) => {
-  db.run(`UPDATE posts SET is_deleted = 1 WHERE id = ?`, [postID], (err) => {
-    if (err) {
-      console.error(err.message);
-      // エラーハンドリングを行う
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "投稿を削除できませんでした" }));
+const deletePost = (req, res, postID, currentUserID) => {
+    db.run(`UPDATE posts SET is_deleted = 1 WHERE id = ? AND user_id = ?`, [postID, currentUserID], (err) => {
+      if (err) {
+        console.error(err.message);
+        // エラーハンドリングを行う
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "投稿を削除できませんでした" }));
+        return;
+      }
+      // 現在のページにリダイレクト（直前のリクエストのURLにリダイレクト）
+      const previousPageURL = req.headers.referer;
+      console.log('deletePostが回りました')
+      res.writeHead(302, { Location: previousPageURL });
+      // res.end(JSON.stringify({ message: "投稿を削除しました" }));
       return;
-    }
-    // 現在のページにリダイレクト（直前のリクエストのURLにリダイレクト）
-    const previousPageURL = req.headers.referer;
-    res.writeHead(302, { Location: previousPageURL });
-    res.end(JSON.stringify({ message: "フォローを解除しました" }));
-    return;
-  });
+    });
 };
 
 //データベースに新たにユーザ情報を登録する関数
