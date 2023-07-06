@@ -1,4 +1,5 @@
 const http = require("http");
+const url = require("url");
 const {
   signUpPage,
   signInPage,
@@ -36,6 +37,7 @@ const {
   db,
 } = require("./databaseUtils");
 const { followingUser, unfollowUser } = require("./followUtils");
+const path = require("path");
 
 const hostname = "0.0.0.0";
 const PORT = 3000;
@@ -62,8 +64,10 @@ const server = http.createServer((req, res) => {
     }
     const currentSession = sessionRecord; //セッションの情報を格納
 
+    const parsedUrl = url.parse(req.url); //URLを解析し、オブジェクトとして取得
+    const pathname = parsedUrl.pathname; //パス部分のみを取得
     // 【セッションチェック】(サインインorサインアップページじゃないページに飛ぼうとしたとき。さらにセッションが無い時に)
-    if (req.url !== "/sign_in" && req.url !== "/sign_up" && !currentSession) {
+    if (pathname !== "/sign_in" && pathname !== "/sign_up" && !currentSession) {
       // ログインしていない場合、サインインページにリダイレクト
       res.writeHead(302, { Location: "/sign_in" });
       res.end();
@@ -71,7 +75,10 @@ const server = http.createServer((req, res) => {
     }
 
     // 【セッションチェック】逆に、サインインしている状態であれば、サインイン・サインアップページに飛ばないようにする。
-    if ((req.url === "/sign_in" || req.url === "/sign_up") && currentSession) {
+    if (
+      (pathname === "/sign_in" || pathname === "/sign_up") &&
+      currentSession
+    ) {
       // トップページにリダイレクト
       res.writeHead(302, { Location: "/" });
       res.end();
