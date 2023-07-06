@@ -64,10 +64,13 @@ const server = http.createServer((req, res) => {
     }
     const currentSession = sessionRecord; //セッションの情報を格納
 
-    const parsedUrl = url.parse(req.url); //URLを解析し、オブジェクトとして取得
-    const pathname = parsedUrl.pathname; //パス部分のみを取得
+    const parsedUrl = url.parse(req.url, true); //URLを解析し、オブジェクトとして取得
     // 【セッションチェック】(サインインorサインアップページじゃないページに飛ぼうとしたとき。さらにセッションが無い時に)
-    if (pathname !== "/sign_in" && pathname !== "/sign_up" && !currentSession) {
+    if (
+      parsedUrl.pathname !== "/sign_in" &&
+      parsedUrl.pathname !== "/sign_up" &&
+      !currentSession
+    ) {
       // ログインしていない場合、サインインページにリダイレクト
       res.writeHead(302, { Location: "/sign_in" });
       res.end();
@@ -76,7 +79,8 @@ const server = http.createServer((req, res) => {
 
     // 【セッションチェック】逆に、サインインしている状態であれば、サインイン・サインアップページに飛ばないようにする。
     if (
-      (pathname === "/sign_in" || pathname === "/sign_up") &&
+      (parsedUrl.pathname === "/sign_in" ||
+        parsedUrl.pathname === "/sign_up") &&
       currentSession
     ) {
       // トップページにリダイレクト
@@ -86,15 +90,22 @@ const server = http.createServer((req, res) => {
     }
 
     // URLから取得された情報
-    const id = req.url.split("/").pop(); //URLの一番後ろのIDを取得
-    const secondID = req.url.split("/")[req.url.split("/").length - 2]; //URLの後ろから二番目のIDを取得
-    const urlQueryParam = req.url.split("?").pop(); //URLのクエリパラメータを取得
+    // const id = req.url.split("/").pop(); //URLの一番後ろのIDを取得
+    // const secondID = req.url.split("/")[req.url.split("/").length - 2]; //URLの後ろから二番目のIDを取得
+    // const urlQueryParam = req.url.split("?").pop(); //URLのクエリパラメータを取得
+
+    // URLから取得された情報(pathモジュールを活用)
+    const id = parsedUrl.pathname.split("/").pop(); //URLの一番後ろのIDを取得
+    const secondID = parsedUrl.pathname.split("/")[parsedUrl.pathname.split("/").length - 2]; //URLの後ろから二番目のIDを取得
+    const searchQueryKey = 'keyword'; //検索機能における、クエリパラメータのキー
+    const urlQueryParam = parsedUrl.query[searchQueryKey]; //URLのクエリパラメータ(valueのみ)を取得
 
     // 様々な制限。ここの数字を変えるだけで簡単に変更がかけられます
     const maxPostCount = 5; // １ページに表示させる最大投稿数（ページネーション）
     const maxPostWordCount = 140; //ひとつの投稿の文字数制限
     const maxUserIdWordCount = 15; //ユーザ名の文字数制限
     const fileSizeLimit = 1048576; //アップロードされる画像のファイルサイズを制限(バイト)
+
 
     //ルーティング
     if (req.method === "GET") {
@@ -151,9 +162,9 @@ const server = http.createServer((req, res) => {
           followerUserPage(req, res, currentSession.user_id);
           break;
         case "/search": //検索フォームのページ
-          searchPage(req, res);
+          searchPage(req, res, searchQueryKey);
           break;
-        case `/search/users?${urlQueryParam}`: //ユーザ検索をした結果のページ
+        case `/search/users?${searchQueryKey}=${urlQueryParam}`: //ユーザ検索をした結果のページ
           searchUserResultPage(req, res, currentSession.user_id, urlQueryParam);
           break;
         default:

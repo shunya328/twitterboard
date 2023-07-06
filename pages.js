@@ -86,6 +86,9 @@ const myTimeLinePagenation = (req, res, currentUserID, currentPage, limit) => {
     (err, posts, totalCount) => {
       if (err) {
         console.error(err.message);
+        header(req, res);
+        res.write("エラーが発生しました");
+        footer(req, res);
         return;
       }
       header(req, res);
@@ -206,6 +209,9 @@ const showUserPagePagenation = (
   findUserByUserID(currentUserID, userID, (err, user) => {
     if (err) {
       console.error(err.message);
+      header(req, res);
+      res.write("エラーが発生しました");
+      footer(req, res);
       return;
     }
 
@@ -223,6 +229,9 @@ const showUserPagePagenation = (
       (err, posts, totalCount) => {
         if (err) {
           console.error(err.message);
+          header(req, res);
+          res.write("エラーが発生しました");
+          footer(req, res);
           return;
         } else if (posts.length === 0) {
           header(req, res);
@@ -358,7 +367,9 @@ const showPost = (req, res, postID, currentUserID) => {
     if (err) {
       // エラーが発生した場合の処理
       res.statusCode = err.statusCode || 500;
-      res.end(err.message);
+      header(req, res);
+      res.write(err.message);
+      footer(req, res);
       return;
     }
     header(req, res);
@@ -638,13 +649,13 @@ const followerUserPage = (req, res, currentUserID) => {
 };
 
 // 検索のフォームがあるページ
-const searchPage = (req, res) => {
+const searchPage = (req, res, searchQueryKey) => {
   header(req, res);
 
   res.write(`
   <h2>ユーザ検索</h2>
   <form action="/search/users" method="get">
-    <input type="text" name="keyword" pattern="^[a-zA-Z0-9]+$" placeholder="ユーザ検索キーワードを入力">
+    <input type="text" name="${searchQueryKey}" pattern="^[a-zA-Z0-9]+$" placeholder="ユーザ検索キーワードを入力">
     <button type="submit">検索</button>
   </form>
   `);
@@ -654,8 +665,8 @@ const searchPage = (req, res) => {
 
 // ユーザ検索の結果を返すページ
 const searchUserResultPage = (req, res, currentUserID, urlQueryParam) => {
-  const searchWord = urlQueryParam.split("keyword=").pop(); // urlQueryParamから検索ワードを抜き出す
-  findUserBySearchWord(currentUserID, searchWord, (err, users) => {
+  console.log("searchWord: ", urlQueryParam);
+  findUserBySearchWord(currentUserID, urlQueryParam, (err, users) => {
     if (err) {
       // エラーハンドリング
       console.error(err);
@@ -665,7 +676,7 @@ const searchUserResultPage = (req, res, currentUserID, urlQueryParam) => {
     }
     header(req, res);
 
-    res.write(`<h1>検索ワード"${searchWord}"の検索結果</h1>`);
+    res.write(`<h1>検索ワード"${urlQueryParam}"の検索結果</h1>`);
 
     if (users.length === 0) {
       res.write("<h3>ユーザはいません</h3>");
@@ -724,7 +735,8 @@ const readImageFile = (req, res) => {
       res.statusCode = 200;
       res.end(data);
     });
-  } else { //許可されていないディレクトリなら
+  } else {
+    //許可されていないディレクトリなら
     console.error("許可されていないディレクトリへのアクセスを検知しました");
     res.statusCode = 500;
     res.end("要求しているディレクトリにはアクセスできません");
