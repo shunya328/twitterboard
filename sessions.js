@@ -12,8 +12,22 @@ const { generateSessionID } = require("./generateSessionID");
 // これは良くない実装なので、そのうち削除
 // const sessions = {};
 
+// クッキーを取得する関数
+const getCookies = (cookieString) => {
+  const cookies = {};
+
+  if (cookieString) {
+    const cookiePairs = cookieString.split(";"); //ここで、クッキーのキーペアたちを分離
+    cookiePairs.forEach((pair) => {
+      const [key, value] = pair.trim().split("="); //余分な空白を排除し、'='で分離して分割代入
+      cookies[key] = value;
+    });
+  }
+  return cookies;
+};
+
 // サインインの処理。POSTメソッド。
-const postSignInPage = (req, res) => {
+const postSignInPage = (req, res, cookieKey) => {
   //まずはPOSTで送られたデータを受け取る
   //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
   let body = [];
@@ -70,7 +84,7 @@ const postSignInPage = (req, res) => {
             console.log(`userIDは、${user.id}`);
 
             // セッションIDをクライアントに送信(cookie)
-            res.setHeader("Set-Cookie", `sessionID=${sessionID}; Path=/`);
+            res.setHeader("Set-Cookie", `${cookieKey}=${sessionID}; Path=/`);
 
             // ログイン成功のレスポンスを返す
             res.statusCode = 200;
@@ -95,7 +109,7 @@ const postSignInPage = (req, res) => {
 };
 
 // サインアップのPOSTメソッド
-const postSignUpPage = (req, res, maxUserIdWordCount) => {
+const postSignUpPage = (req, res, maxUserIdWordCount, cookieKey) => {
   //まずはPOSTで送られたデータを受け取る
   //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
   let body = [];
@@ -221,7 +235,10 @@ const postSignUpPage = (req, res, maxUserIdWordCount) => {
                   console.log(`userIDは、${user.id}`);
 
                   // セッションIDをクライアントに送信(cookie)
-                  res.setHeader("Set-Cookie", `sessionID=${sessionID}; Path=/`);
+                  res.setHeader(
+                    "Set-Cookie",
+                    `${cookieKey}=${sessionID}; Path=/`
+                  );
 
                   // ログイン成功のレスポンスを返す
                   res.statusCode = 200;
@@ -249,7 +266,7 @@ const postSignUpPage = (req, res, maxUserIdWordCount) => {
 };
 
 // ログアウトのPOSTメソッド
-const postLogout = (req, res, sessionID) => {
+const postLogout = (req, res, sessionID, cookieKey) => {
   // セッションIDが存在する場合、セッションを削除(ここの実装は悪なので、そのうち消します)
   // if (sessionID && sessions[sessionID]) {
   //   delete sessions[sessionID];
@@ -262,7 +279,7 @@ const postLogout = (req, res, sessionID) => {
       return;
     }
     // クッキーを削除
-    res.setHeader("Set-Cookie", "sessionID=; Path=/;");
+    res.setHeader("Set-Cookie", `${cookieKey}=; Path=/;`);
 
     // サインインページにリダイレクト
     res.writeHead(302, { Location: "/sign_in" });
@@ -273,6 +290,7 @@ const postLogout = (req, res, sessionID) => {
 
 module.exports = {
   // sessions,
+  getCookies,
   postSignInPage,
   postSignUpPage,
   postLogout,

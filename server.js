@@ -24,6 +24,7 @@ const {
 } = require("./postUtils");
 const {
   // sessions,
+  getCookies,
   postSignInPage,
   postSignUpPage,
   postLogout,
@@ -38,19 +39,20 @@ const { followingUser, unfollowUser } = require("./followUtils");
 
 const hostname = "0.0.0.0";
 const PORT = 3000;
-const rateLimitCounters = {}; //レート制限のための
 
 // httpサーバの定義
 const server = http.createServer((req, res) => {
   res.statusCode = 200; //通信成功のステータスコード
   res.setHeader("Content-Type", "text/html; charset=UTF-8"); //テキストを返す際、日本語を返すのでcharsetもセット・・・
 
+  const cookieKey = "sessionID"; //クッキーに保存する際のキー
   // セッションIDの取得
-  const sessionID = req.headers.cookie
-    ? req.headers.cookie.split("=")[1]
-    : null;
+  // const sessionID = req.headers.cookie
+  //   ? req.headers.cookie.split("=")[1]
+  //   : null;
+  const cookies = getCookies(req.headers.cookie); //クッキーの全てのキーペアを取得
+  const sessionID = cookies[cookieKey] || null; //該当のプロパティの値を取得
   console.log(`現在のcookieは→ ${sessionID}`);
-  // console.log(`現在のsessions[sessionID]は、→${sessions[sessionID]}`);
 
   // ここで、ユーザのクッキーに保存されているセッションIDを、sessionsテーブルと突合
   searchSession(sessionID, (err, sessionRecord) => {
@@ -171,13 +173,13 @@ const server = http.createServer((req, res) => {
           deletePost(req, res, id, currentSession.user_id);
           break;
         case "/sign_up": //サインアップをする
-          postSignUpPage(req, res, maxUserIdWordCount);
+          postSignUpPage(req, res, maxUserIdWordCount, cookieKey);
           break;
         case "/sign_in": //サインインをする
-          postSignInPage(req, res);
+          postSignInPage(req, res, cookieKey);
           break;
         case "/logout": //ログアウトをする
-          postLogout(req, res, sessionID);
+          postLogout(req, res, sessionID, cookieKey);
           break;
         case "/mypage/edit_profile": //自分のユーザ情報を変更する
           // updateEditProfilePageをPromiseで実行
