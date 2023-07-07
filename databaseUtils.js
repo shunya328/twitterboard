@@ -618,7 +618,7 @@ const updateUser = (
                         return;
                       }
                     );
-                  } else {
+                  } else if(!hashedPassword) {
                     db.run(
                       `
                       UPDATE users SET profile_image = ? WHERE id = ?
@@ -646,16 +646,14 @@ const updateUser = (
                       callback(null);
                       return;
                     });
-                } else {
+                } else if (!hashedPassword && !userImage) {
                   callback(null);
                   return;
                 }
               });
           }
-        }
-      );
-    }
-  );
+        });
+    });
 };
 
 //データベースからユーザを検索する関数(サインインのとき)

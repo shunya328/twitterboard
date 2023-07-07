@@ -136,3 +136,6 @@ dist
 # 画像データを保存するところをプッシュしません
 public/post_images/
 public/user_images/
+
+# prettierの設定ファイル
+.prettier
