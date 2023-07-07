@@ -6,7 +6,7 @@ const {
   findUserSignIn,
   findUserSignUp,
 } = require("./databaseUtils");
-const { generateSessionID } = require("./generateSessionID");
+const { getSessionId } = require("./getRandomString");
 
 // セッションデータを保存するためのMapオブジェクト(グローバル変数)
 // これは良くない実装なので、そのうち削除
@@ -54,7 +54,7 @@ const postSignInPage = (req, res, cookieKey) => {
             console.log(user);
 
             // ログイン成功時にセッションIDを生成
-            const sessionID = generateSessionID(); //32桁のランダムな文字列を生成＆格納
+            const sessionID = getSessionId(); //32桁のランダムな文字列を生成＆格納
 
             // セッションデータに必要な情報を保存
             // sessions[sessionID] = {
@@ -204,7 +204,7 @@ const postSignUpPage = (req, res, maxUserIdWordCount, cookieKey) => {
                 if (user) {
                   console.log("user:", user);
                   // サインアップ成功時にセッションIDを生成
-                  const sessionID = generateSessionID(); //32桁のランダムな文字列を生成＆格納
+                  const sessionID = getSessionId(); //32桁のランダムな文字列を生成＆格納
 
                   // セッションデータに必要な情報を保存
                   // sessions[sessionID] = {

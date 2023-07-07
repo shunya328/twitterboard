@@ -8,6 +8,8 @@ const path = require("path");
 const { generateSessionID } = require("./generateSessionID"); //ランダムな文字列を生み出す関数
 // cryptoモジュールの取り込み
 const crypto = require("crypto");
+// ランダム文字列のファイル名をつくるため
+const { getFileName } = require("./getRandomString");
 
 // パスワードのハッシュ化とソルト生成を行う関数
 const hashPasswordWithSalt = (password) => {
@@ -347,7 +349,7 @@ const insertPost = (content, image, reply_to, currentUserID) => {
   return new Promise((resolve, reject) => {
     if (image) {
       //　画像の前準備
-      const fileName = generateSessionID() + ".jpg"; //ランダムな文字列を画像の名前にする
+      const fileName = getFileName('jpg'); //ランダムな文字列を画像の名前にする
       fs.mkdirSync(path.join(__dirname, "public", "post_images"), {
         recursive: true,
       }); //保存先ディレクトリがない場合、作る
@@ -625,7 +627,7 @@ const updateUser = (
             }
             if (userImage) {
               //　画像の前準備
-              const fileName = generateSessionID() + ".jpg"; //ランダムな文字列を画像の名前にする
+              const fileName = getFileName('jpg'); //ランダムな文字列を画像の名前にする
               fs.mkdirSync(path.join(__dirname, "public", "user_images"), {
                 recursive: true,
               }); //保存先ディレクトリがない場合、作る
