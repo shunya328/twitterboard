@@ -201,7 +201,7 @@ const server = http.createServer((req, res) => {
           break;
         case "/mypage/edit_profile": //自分のユーザ情報を変更する
           // updateEditProfilePageをPromiseで実行
-          updateEditProfilePage(req, res, currentSession, maxUserIdWordCount)
+          updateEditProfilePage(req, res, currentSession, maxUserIdWordCount, fileSizeLimit)
             .then((updateUser) => {
               if (updateUser) {
                 console.log(`updatedUser = ${updateUser}`);
@@ -211,6 +211,7 @@ const server = http.createServer((req, res) => {
                     console.error(err);
                     return;
                   }
+                  return;
                 });
               }
             })

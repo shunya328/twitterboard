@@ -349,7 +349,7 @@ const insertPost = (content, image, reply_to, currentUserID) => {
   return new Promise((resolve, reject) => {
     if (image) {
       //　画像の前準備
-      const fileName = getFileName('jpg'); //ランダムな文字列を画像の名前にする
+      const fileName = getFileName("jpg"); //ランダムな文字列を画像の名前にする
       fs.mkdirSync(path.join(__dirname, "public", "post_images"), {
         recursive: true,
       }); //保存先ディレクトリがない場合、作る
@@ -572,90 +572,85 @@ const updateUser = (
 
           //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを更新
           if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
-            //データの書き込み
-            if (userName) {
-              db.run(
-                `UPDATE users SET name = ? WHERE id = ?`,
-                [userName, userID],
-                (err) => {
-                  if (err) {
-                    callback(err);
-                    return;
-                  }
-                  callback(null);
+            //ユーザ名、メール、プロフィールはそのまま書き込む
+            db.run(
+              `
+            UPDATE users SET name = ?, email = ?, profile = ? WHERE id =?
+            `,
+              [userName, userEmail, userProfile, userID],
+              (err) => {
+                if (err) {
+                  callback(err);
+                  return;
                 }
-              );
-            }
-            if (userEmail) {
-              db.run(
-                `UPDATE users SET email = ? WHERE id = ?`,
-                [userEmail, userID],
-                (err) => {
-                  if (err) {
-                    callback(err);
-                    return;
-                  }
-                  callback(null);
-                }
-              );
-            }
-            if (hashedPassword) {
-              db.run(
-                `UPDATE users SET password = ?, salt = ? WHERE id = ?`,
-                [hashedPassword, salt, userID],
-                (err) => {
-                  if (err) {
-                    callback(err);
-                    return;
-                  }
-                  callback(null);
-                }
-              );
-            }
-            if (userProfile) {
-              db.run(
-                `UPDATE users SET profile = ? WHERE id = ?`,
-                [userProfile, userID],
-                (err) => {
-                  if (err) {
-                    callback(err);
-                    return;
-                  }
-                  callback(null);
-                }
-              );
-            }
-            if (userImage) {
-              //　画像の前準備
-              const fileName = getFileName('jpg'); //ランダムな文字列を画像の名前にする
-              fs.mkdirSync(path.join(__dirname, "public", "user_images"), {
-                recursive: true,
-              }); //保存先ディレクトリがない場合、作る
-              const imagePath = path.join(
-                __dirname,
-                "public",
-                "user_images",
-                fileName
-              ); //画像の保存先
-              fs.writeFileSync(imagePath, userImage, "binary"); //画像を保存する
-              // "/public/user_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
-              const imagePathInDB = imagePath.replace(
-                /.*\/public\//,
-                "/public/"
-              );
 
-              db.run(
-                `UPDATE users SET profile_image = ? WHERE id = ?`,
-                [imagePathInDB, userID],
-                (err) => {
-                  if (err) {
-                    callback(err);
-                    return;
+                //ここから、パスワードの有無&画像の有無によって条件分岐
+                if (userImage) {
+                  //　画像の前準備
+                  const fileName = getFileName("jpg"); //ランダムな文字列を画像の名前にする
+                  fs.mkdirSync(path.join(__dirname, "public", "user_images"), {
+                    recursive: true,
+                  }); //保存先ディレクトリがない場合、作る
+                  const imagePath = path.join(
+                    __dirname,
+                    "public",
+                    "user_images",
+                    fileName
+                  ); //画像の保存先
+                  fs.writeFileSync(imagePath, userImage, "binary"); //画像を保存する
+                  // "/public/user_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
+                  const imagePathInDB = imagePath.replace(
+                    /.*\/public\//,
+                    "/public/"
+                  );
+
+                  if (hashedPassword) {
+                    db.run(
+                      `
+                      UPDATE users SET profile_image = ?, password = ?, salt = ? WHERE id = ?
+                      `,
+                      [imagePathInDB, hashedPassword, salt, userID],(err) => {
+                        if (err) {
+                          callback(err);
+                          return;
+                        }
+                        callback(null);
+                        return;
+                      }
+                    );
+                  } else {
+                    db.run(
+                      `
+                      UPDATE users SET profile_image = ? WHERE id = ?
+                      `,
+                      [imagePathInDB, userID],(err) => {
+                        if (err) {
+                          callback(err);
+                          return;
+                        }
+                        callback(null);
+                        return;
+                      }
+                    );
                   }
+                } else if (hashedPassword && !userImage) {
+                  db.run(
+                    `
+                    UPDATE users SET password = ?, salt = ? WHERE id = ?
+                    `,
+                    [hashedPassword, salt, userID],(err) => {
+                      if (err) {
+                        callback(err);
+                        return;
+                      }
+                      callback(null);
+                      return;
+                    });
+                } else {
                   callback(null);
+                  return;
                 }
-              );
-            }
+              });
           }
         }
       );
