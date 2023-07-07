@@ -8,7 +8,7 @@ const path = require("path");
 const { generateSessionID } = require("./generateSessionID"); //ランダムな文字列を生み出す関数
 // cryptoモジュールの取り込み
 const crypto = require("crypto");
-// ランダム文字列のファイル名をつくるため
+// ランダム文字列のファイル名をつくるための関数を呼ぶ
 const { getFileName } = require("./getRandomString");
 
 // パスワードのハッシュ化とソルト生成を行う関数
@@ -23,10 +23,6 @@ const hashPasswordWithSalt = (password) => {
       .update(hashedPassword)
       .digest("hex");
   }
-  // const hashedPassword = crypto
-  //   .createHmac("sha256", salt) //SHA-256ハッシュ関数を利用
-  //   .update(password)
-  //   .digest("hex");
 
   return { hashedPassword, salt };
 };
@@ -37,15 +33,8 @@ const verifyPassword = (inputPassword, storedPassword, salt) => {
 
   //一万回ストレッチングします
   for (let i = 0; i < 10000; i++) {
-    hashedInputPassword = crypto
-      .createHmac("sha256", salt)
-      .update(hashedInputPassword)
-      .digest("hex");
+    hashedInputPassword = crypto.createHmac("sha256", salt).update(hashedInputPassword).digest("hex");
   }
-  // const hashedInputPassword = crypto
-  //   .createHmac("sha256", salt)
-  //   .update(inputPassword)
-  //   .digest("hex");
 
   return hashedInputPassword === storedPassword;
 };
@@ -97,29 +86,14 @@ db.run(`CREATE TABLE IF NOT EXISTS sessions (
 )`);
 
 // セッションに必要な情報を登録
-const setSession = (
-  session_id,
-  user_id,
-  user_name,
-  user_email,
-  user_profile,
-  user_profile_image,
-  callback
-) => {
+const setSession = (session_id, user_id, user_name, user_email, user_profile, user_profile_image, callback) => {
   db.run(
     `
   INSERT INTO sessions (
     session_id, user_id, name, email, profile, profile_image
   ) VALUES (?, ?, ?, ?, ?, ?)
   `,
-    [
-      session_id,
-      user_id,
-      user_name,
-      user_email,
-      user_profile,
-      user_profile_image,
-    ],
+    [session_id, user_id, user_name, user_email, user_profile, user_profile_image],
     (err) => {
       if (err) {
         callback(err);
@@ -201,12 +175,7 @@ const getAllPosts = (callback) => {
 };
 
 // 自分のタイムライン取得、ページネーション対応
-const getMyTimelinePostsPagenation = (
-  currentUserID,
-  currentPage,
-  limit,
-  callback
-) => {
+const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callback) => {
   const offset = (currentPage - 1) * limit;
 
   // まず、対象となる投稿の全レコード数を取得する
@@ -437,25 +406,21 @@ const getReplyPost = (req, res, postID, callback) => {
 
 //データベースの特定の投稿を削除する関数(論理削除)
 const deletePost = (req, res, postID, currentUserID) => {
-  db.run(
-    `UPDATE posts SET is_deleted = 1 WHERE id = ? AND user_id = ?`,
-    [postID, currentUserID],
-    (err) => {
-      if (err) {
-        console.error(err.message);
-        // エラーハンドリングを行う
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "投稿を削除できませんでした" }));
-        return;
-      }
-      // 現在のページにリダイレクト（直前のリクエストのURLにリダイレクト）
-      const previousPageURL = req.headers.referer;
-      console.log("deletePostが回りました");
-      res.writeHead(302, { Location: previousPageURL });
-      // res.end(JSON.stringify({ message: "投稿を削除しました" }));
+  db.run(`UPDATE posts SET is_deleted = 1 WHERE id = ? AND user_id = ?`, [postID, currentUserID], (err) => {
+    if (err) {
+      console.error(err.message);
+      // エラーハンドリングを行う
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "投稿を削除できませんでした" }));
       return;
     }
-  );
+    // 現在のページにリダイレクト（直前のリクエストのURLにリダイレクト）
+    const previousPageURL = req.headers.referer;
+    console.log("deletePostが回りました");
+    res.writeHead(302, { Location: previousPageURL });
+    // res.end(JSON.stringify({ message: "投稿を削除しました" }));
+    return;
+  });
 };
 
 //データベースに新たにユーザ情報を登録する関数
@@ -467,193 +432,166 @@ const insertUser = (userName, userEmail, userPassword, callback) => {
   const isUserNameDuplicate = { value: false };
   const isUserEmailDuplicate = { value: false };
   //ユーザ名の重複チェック
-  db.get(
-    "SELECT COUNT (*) AS count FROM users WHERE name = ?",
-    [userName],
-    (err, row) => {
+  db.get("SELECT COUNT (*) AS count FROM users WHERE name = ?", [userName], (err, row) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    if (row.count > 0) {
+      console.log("row.count:", row.count);
+      const error = new Error("同じユーザ名が既に存在しています");
+      callback(error);
+      isUserNameDuplicate.value = true;
+      return;
+    }
+    //メールアドレスの重複チェック
+    db.get("SELECT COUNT (*) AS count FROM users WHERE email = ?", [userEmail], (err, row) => {
       if (err) {
         callback(err);
         return;
       }
       if (row.count > 0) {
-        console.log("row.count:", row.count);
-        const error = new Error("同じユーザ名が既に存在しています");
+        const error = new Error("同じメールアドレスが既に存在しています");
         callback(error);
-        isUserNameDuplicate.value = true;
+        isUserEmailDuplicate.value = true;
         return;
       }
-      //メールアドレスの重複チェック
-      db.get(
-        "SELECT COUNT (*) AS count FROM users WHERE email = ?",
-        [userEmail],
-        (err, row) => {
-          if (err) {
-            callback(err);
-            return;
-          }
-          if (row.count > 0) {
-            const error = new Error("同じメールアドレスが既に存在しています");
-            callback(error);
-            isUserEmailDuplicate.value = true;
-            return;
-          }
-          //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを新規登録
-          if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
-            db.run(
-              `INSERT INTO users (
+      //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを新規登録
+      if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
+        db.run(
+          `INSERT INTO users (
               name, email, password, salt
               ) VALUES (?, ?, ?, ?)`,
-              [userName, userEmail, hashedPassword, salt],
-              (err) => {
-                if (err) {
-                  callback(err);
-                  return;
-                }
-                callback(null);
-              }
-            );
+          [userName, userEmail, hashedPassword, salt],
+          (err) => {
+            if (err) {
+              callback(err);
+              return;
+            }
+            callback(null);
           }
-        }
-      );
-    }
-  );
+        );
+      }
+    });
+  });
 };
 
 //データベース上のユーザ情報を変更する関数
-const updateUser = (
-  userID,
-  userName,
-  userEmail,
-  userPassword,
-  userProfile,
-  userImage,
-  callback
-) => {
+const updateUser = (userID, userName, userEmail, userPassword, userProfile, userImage, callback) => {
   //パスワードをハッシュ化し、ソルト値も取得
-  const { hashedPassword, salt } = userPassword
-    ? hashPasswordWithSalt(userPassword)
-    : "";
+  const { hashedPassword, salt } = userPassword ? hashPasswordWithSalt(userPassword) : "";
 
   const isUserNameDuplicate = { value: false };
   const isUserEmailDuplicate = { value: false };
   console.log("updateUserは回っているみたいinupdateUser");
 
   //ユーザ名の重複チェック
-  db.get(
-    "SELECT COUNT (*) AS count FROM users WHERE name = ? AND id != ?",
-    [userName, userID],
-    (err, row) => {
+  db.get("SELECT COUNT (*) AS count FROM users WHERE name = ? AND id != ?", [userName, userID], (err, row) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    if (row.count > 0) {
+      const error = new Error("同じユーザ名が既に存在しています");
+      callback(error);
+      isUserNameDuplicate.value = true;
+      return;
+    }
+
+    //メールアドレスの重複チェック
+    db.get("SELECT COUNT (*) AS count FROM users WHERE email = ? AND id != ?", [userEmail, userID], (err, row) => {
       if (err) {
         callback(err);
         return;
       }
       if (row.count > 0) {
-        const error = new Error("同じユーザ名が既に存在しています");
+        const error = new Error("同じメールアドレスが既に存在しています");
         callback(error);
-        isUserNameDuplicate.value = true;
+        isUserEmailDuplicate.value = true;
         return;
       }
 
-      //メールアドレスの重複チェック
-      db.get(
-        "SELECT COUNT (*) AS count FROM users WHERE email = ? AND id != ?",
-        [userEmail, userID],
-        (err, row) => {
-          if (err) {
-            callback(err);
-            return;
-          }
-          if (row.count > 0) {
-            const error = new Error("同じメールアドレスが既に存在しています");
-            callback(error);
-            isUserEmailDuplicate.value = true;
-            return;
-          }
-
-          //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを更新
-          if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
-            //ユーザ名、メール、プロフィールはそのまま書き込む
-            db.run(
-              `
+      //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを更新
+      if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
+        //ユーザ名、メール、プロフィールはそのまま書き込む
+        db.run(
+          `
             UPDATE users SET name = ?, email = ?, profile = ? WHERE id =?
             `,
-              [userName, userEmail, userProfile, userID],
-              (err) => {
-                if (err) {
-                  callback(err);
-                  return;
-                }
+          [userName, userEmail, userProfile, userID],
+          (err) => {
+            if (err) {
+              callback(err);
+              return;
+            }
 
-                //ここから、パスワードの有無&画像の有無によって条件分岐
-                if (userImage) {
-                  //　画像の前準備
-                  const fileName = getFileName("jpg"); //ランダムな文字列を画像の名前にする
-                  fs.mkdirSync(path.join(__dirname, "public", "user_images"), {
-                    recursive: true,
-                  }); //保存先ディレクトリがない場合、作る
-                  const imagePath = path.join(
-                    __dirname,
-                    "public",
-                    "user_images",
-                    fileName
-                  ); //画像の保存先
-                  fs.writeFileSync(imagePath, userImage, "binary"); //画像を保存する
-                  // "/public/user_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
-                  const imagePathInDB = imagePath.replace(
-                    /.*\/public\//,
-                    "/public/"
-                  );
+            //ここから、パスワードの有無&画像の有無によって条件分岐
+            if (userImage) {
+              //　画像の前準備
+              const fileName = getFileName("jpg"); //ランダムな文字列を画像の名前にする
+              fs.mkdirSync(path.join(__dirname, "public", "user_images"), {
+                recursive: true,
+              }); //保存先ディレクトリがない場合、作る
+              const imagePath = path.join(__dirname, "public", "user_images", fileName); //画像の保存先
+              fs.writeFileSync(imagePath, userImage, "binary"); //画像を保存する
+              // "/public/user_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
+              const imagePathInDB = imagePath.replace(/.*\/public\//, "/public/");
 
-                  if (hashedPassword) {
-                    db.run(
-                      `
+              if (hashedPassword) {
+                db.run(
+                  `
                       UPDATE users SET profile_image = ?, password = ?, salt = ? WHERE id = ?
                       `,
-                      [imagePathInDB, hashedPassword, salt, userID],(err) => {
-                        if (err) {
-                          callback(err);
-                          return;
-                        }
-                        callback(null);
-                        return;
-                      }
-                    );
-                  } else if(!hashedPassword) {
-                    db.run(
-                      `
+                  [imagePathInDB, hashedPassword, salt, userID],
+                  (err) => {
+                    if (err) {
+                      callback(err);
+                      return;
+                    }
+                    callback(null);
+                    return;
+                  }
+                );
+              } else if (!hashedPassword) {
+                db.run(
+                  `
                       UPDATE users SET profile_image = ? WHERE id = ?
                       `,
-                      [imagePathInDB, userID],(err) => {
-                        if (err) {
-                          callback(err);
-                          return;
-                        }
-                        callback(null);
-                        return;
-                      }
-                    );
+                  [imagePathInDB, userID],
+                  (err) => {
+                    if (err) {
+                      callback(err);
+                      return;
+                    }
+                    callback(null);
+                    return;
                   }
-                } else if (hashedPassword && !userImage) {
-                  db.run(
-                    `
+                );
+              }
+            } else if (hashedPassword && !userImage) {
+              db.run(
+                `
                     UPDATE users SET password = ?, salt = ? WHERE id = ?
                     `,
-                    [hashedPassword, salt, userID],(err) => {
-                      if (err) {
-                        callback(err);
-                        return;
-                      }
-                      callback(null);
-                      return;
-                    });
-                } else if (!hashedPassword && !userImage) {
+                [hashedPassword, salt, userID],
+                (err) => {
+                  if (err) {
+                    callback(err);
+                    return;
+                  }
                   callback(null);
                   return;
                 }
-              });
+              );
+            } else if (!hashedPassword && !userImage) {
+              callback(null);
+              return;
+            }
           }
-        });
+        );
+      }
     });
+  });
 };
 
 //データベースからユーザを検索する関数(サインインのとき)
@@ -663,9 +601,7 @@ const findUserSignIn = (userName, inputPassword, callback) => {
       callback(err);
       return;
     }
-    const isVerified = rows[0]
-      ? verifyPassword(inputPassword, rows[0].password, rows[0].salt)
-      : null;
+    const isVerified = rows[0] ? verifyPassword(inputPassword, rows[0].password, rows[0].salt) : null;
 
     callback(null, rows[0], isVerified);
   });
@@ -673,17 +609,13 @@ const findUserSignIn = (userName, inputPassword, callback) => {
 
 //データベースからユーザを検索する（サインアップのとき）
 const findUserSignUp = (userName, userEmail, userPassword, callback) => {
-  db.all(
-    `SELECT * FROM users WHERE name = ? AND email = ?`,
-    [userName, userEmail],
-    (err, rows) => {
-      if (err) {
-        callback(err);
-        return;
-      }
-      callback(null, rows[0]);
+  db.all(`SELECT * FROM users WHERE name = ? AND email = ?`, [userName, userEmail], (err, rows) => {
+    if (err) {
+      callback(err);
+      return;
     }
-  );
+    callback(null, rows[0]);
+  });
 };
 
 // ユーザIDを使ってデータベースからユーザを検索する(自身がフォローしているかどうかも取得)
@@ -738,19 +670,15 @@ const withdrawalUser = (userID, callback) => {
       callback(err);
       return;
     }
-    db.run(
-      `UPDATE posts SET is_deleted = 1 WHERE user_id = ?`,
-      [userID],
-      (err) => {
-        if (err) {
-          console.error(err);
-          callback(err);
-          return;
-        }
-        console.log("withdrawalUserが呼ばれました");
-        callback(null);
+    db.run(`UPDATE posts SET is_deleted = 1 WHERE user_id = ?`, [userID], (err) => {
+      if (err) {
+        console.error(err);
+        callback(err);
+        return;
       }
-    );
+      console.log("withdrawalUserが呼ばれました");
+      callback(null);
+    });
   });
 };
 

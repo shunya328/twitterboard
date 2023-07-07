@@ -1,11 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const {
-  header,
-  footer,
-  beforeLoginHeader,
-  beforeLoginFooter,
-} = require("./pageUtils");
+const { header, footer, beforeLoginHeader, beforeLoginFooter } = require("./pageUtils");
 const {
   getMyTimelinePostsPagenation,
   getAllPostOfUserPagenation,
@@ -15,11 +10,7 @@ const {
   findUserByUserID,
   findUserBySearchWord,
 } = require("./databaseUtils");
-const {
-  getFollowingUser,
-  getFollowerUser,
-  isFollowing,
-} = require("./followUtils");
+const { getFollowingUser, getFollowerUser, isFollowing } = require("./followUtils");
 const { escapeHTML } = require("./escapeHTML");
 
 // サインアップページ
@@ -28,15 +19,9 @@ const signUpPage = (req, res) => {
 
   res.write("<h2>サインアップ</h2>");
   res.write('<form action="/sign_up" method="post">');
-  res.write(
-    '<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$" required><br>'
-  );
-  res.write(
-    '<input type="email" name="user_email" placeholder="e-mail" required><br>'
-  );
-  res.write(
-    '<input type="password" name="user_password" placeholder="password" required><br>'
-  );
+  res.write('<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$" required><br>');
+  res.write('<input type="email" name="user_email" placeholder="e-mail" required><br>');
+  res.write('<input type="password" name="user_password" placeholder="password" required><br>');
   res.write('<input type="submit" value="サインアップ">');
   res.write("</form>");
   res.write('<a href="/sign_in">サインインする</a><br>');
@@ -51,12 +36,8 @@ const signInPage = (req, res) => {
 
   res.write("<h2>サインイン</h2>");
   res.write('<form action="/sign_in" method="post">');
-  res.write(
-    '<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$" required><br>'
-  );
-  res.write(
-    '<input type="password" name="user_password" placeholder="password" required><br>'
-  );
+  res.write('<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$" required><br>');
+  res.write('<input type="password" name="user_password" placeholder="password" required><br>');
   res.write('<input type="submit" value="サインイン">');
   res.write("</form>");
   res.write('<a href="/sign_up">新規登録</a>');
@@ -80,75 +61,62 @@ const topPage = (req, res) => {
 
 // 自分のタイムライン（ページネーション機能込み）
 const myTimeLinePagenation = (req, res, currentUserID, currentPage, limit) => {
-  getMyTimelinePostsPagenation(
-    currentUserID,
-    currentPage,
-    limit,
-    (err, posts, totalCount) => {
-      if (err) {
-        console.error(err.message);
-        header(req, res);
-        res.write("エラーが発生しました");
-        footer(req, res);
-        return;
-      }
+  getMyTimelinePostsPagenation(currentUserID, currentPage, limit, (err, posts, totalCount) => {
+    if (err) {
+      console.error(err.message);
       header(req, res);
-
-      res.write(`<h2>自分のタイムライン ${currentPage}ページ目</h2>`);
-
-      if (posts.length === 0) {
-        res.write("<h3>投稿がありません</h3>");
-      }
-
-      res.write("<ul>");
-      for (let row of posts) {
-        res.write('<li style="border:1px solid #888; padding: 1em">');
-        if (row.is_deleted === 0) {
-          if (row.profile_image) {
-            res.write(
-              `<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`
-            );
-          } else {
-            res.write(
-              `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-            );
-          }
-
-          res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
-          if (row.reply_to) {
-            res.write(
-              `<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`
-            );
-          }
-          res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
-          if (row.image) {
-            res.write(
-              `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
-            );
-          }
-          res.write(`${row.date}<br>`);
-        } else {
-          res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`);
-        }
-        res.write("</li>\n");
-      }
-      res.write("</ul>");
-
-      //ページネーションのリンク
-      if (currentPage > 1) {
-        res.write(`<a href="/my_timeline/${currentPage - 1}">前のページ</a>`);
-      }
-      res.write(`${currentPage}`);
-      if (parseInt(currentPage) * limit < totalCount) {
-        res.write(
-          `<a href="/my_timeline/${parseInt(currentPage) + 1}">次のページ</a>`
-        );
-      }
-
+      res.write("エラーが発生しました");
       footer(req, res);
       return;
     }
-  );
+    header(req, res);
+
+    res.write(`<h2>自分のタイムライン ${currentPage}ページ目</h2>`);
+
+    if (posts.length === 0) {
+      res.write("<h3>投稿がありません</h3>");
+    }
+
+    res.write("<ul>");
+    for (let row of posts) {
+      res.write('<li style="border:1px solid #888; padding: 1em">');
+      if (row.is_deleted === 0) {
+        if (row.profile_image) {
+          res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+        } else {
+          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+        }
+
+        res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
+        if (row.reply_to) {
+          res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`);
+        }
+        res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
+        if (row.image) {
+          res.write(
+            `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
+          );
+        }
+        res.write(`${row.date}<br>`);
+      } else {
+        res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`);
+      }
+      res.write("</li>\n");
+    }
+    res.write("</ul>");
+
+    //ページネーションのリンク
+    if (currentPage > 1) {
+      res.write(`<a href="/my_timeline/${currentPage - 1}">前のページ</a>`);
+    }
+    res.write(`${currentPage}`);
+    if (parseInt(currentPage) * limit < totalCount) {
+      res.write(`<a href="/my_timeline/${parseInt(currentPage) + 1}">次のページ</a>`);
+    }
+
+    footer(req, res);
+    return;
+  });
 };
 
 // ユーザ一覧ページ(GET)
@@ -168,13 +136,9 @@ const userIndexPage = (req, res, currentUserID) => {
         res.write("<li>");
         if (row.profile_image) {
           console.log("row.profile_image:", row.profile_image);
-          res.write(
-            `<img src="${row.profile_image}" alt="プロフィール画像" style="width:80px; height:auto" />`
-          );
+          res.write(`<img src="${row.profile_image}" alt="プロフィール画像" style="width:80px; height:auto" />`);
         } else {
-          res.write(
-            `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-          );
+          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
         }
         res.write(`<a href="/users/${row.id}/1">${row.name}</a>`);
         // フォローするボタンの追加
@@ -199,14 +163,7 @@ const userIndexPage = (req, res, currentUserID) => {
 };
 
 // ユーザ詳細画面（ページネーション機能あり）
-const showUserPagePagenation = (
-  req,
-  res,
-  currentUserID,
-  userID,
-  currentPage,
-  limit
-) => {
+const showUserPagePagenation = (req, res, currentUserID, userID, currentPage, limit) => {
   findUserByUserID(currentUserID, userID, (err, user) => {
     if (err) {
       console.error(err.message);
@@ -223,58 +180,19 @@ const showUserPagePagenation = (
       return;
     }
 
-    getAllPostOfUserPagenation(
-      userID,
-      currentPage,
-      limit,
-      (err, posts, totalCount) => {
-        if (err) {
-          console.error(err.message);
-          header(req, res);
-          res.write("エラーが発生しました");
-          footer(req, res);
-          return;
-        } else if (posts.length === 0) {
-          header(req, res);
-          if (user.profile_image) {
-            res.write(
-              `<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`
-            );
-          } else {
-            res.write(
-              `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-            );
-          }
-          // フォローするボタンの追加
-          if (user.is_following === 1) {
-            res.write("<span>フォロー済み</span>");
-            res.write(`<form action="/unfollow/${user.id}" method="post">`);
-            res.write('<button type="submit">フォロー解除</button>');
-            res.write("</form>");
-          } else if (user.id !== currentUserID) {
-            res.write(`<form action="/following/${user.id}" method="post">`);
-            res.write('<button type="submit">フォローする</button>');
-            res.write("</form>");
-          }
-          res.write(`<h2>${user.name}</h2>`);
-          res.write(`<h4>${escapeHTML(user.profile)}</h4>`);
-          res.write("<h3>投稿がありません</h3>");
-
-          footer(req, res);
-          return;
-        }
-
+    getAllPostOfUserPagenation(userID, currentPage, limit, (err, posts, totalCount) => {
+      if (err) {
+        console.error(err.message);
         header(req, res);
-
-        res.write(`<h2>ユーザの投稿一覧画面 ${currentPage}ページ目</h2>`);
-        if (posts[0].profile_image) {
-          res.write(
-            `<img src="${posts[0].profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`
-          );
+        res.write("エラーが発生しました");
+        footer(req, res);
+        return;
+      } else if (posts.length === 0) {
+        header(req, res);
+        if (user.profile_image) {
+          res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
         } else {
-          res.write(
-            `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-          );
+          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
         }
         // フォローするボタンの追加
         if (user.is_following === 1) {
@@ -288,60 +206,74 @@ const showUserPagePagenation = (
           res.write("</form>");
         }
         res.write(`<h2>${user.name}</h2>`);
-        res.write(`<h4>${escapeHTML(user.profile)}</h4><br>`);
-
-        res.write("<ul>");
-        for (let row of posts) {
-          res.write('<li style="border:1px solid #888; padding: 1em">');
-          if (row.is_deleted === 0) {
-            if (row.profile_image) {
-              res.write(
-                `<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`
-              );
-            } else {
-              res.write(
-                `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-              );
-            }
-            res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
-            if (row.reply_to) {
-              res.write(
-                `<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`
-              );
-            }
-            res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
-            if (row.image) {
-              res.write(
-                `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
-              );
-            }
-            res.write(`${row.date}<br>`);
-          } else {
-            res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`);
-          }
-          res.write("</li>\n");
-        }
-        res.write("</ul>");
-
-        //ページネーションのリンク
-        if (currentPage > 1) {
-          res.write(
-            `<a href="/users/${userID}/${currentPage - 1}">前のページ</a>`
-          );
-        }
-        res.write(`${currentPage}`);
-        if (parseInt(currentPage) * limit < totalCount) {
-          res.write(
-            `<a href="/users/${userID}/${
-              parseInt(currentPage) + 1
-            }">次のページ</a>`
-          );
-        }
+        res.write(`<h4>${escapeHTML(user.profile)}</h4>`);
+        res.write("<h3>投稿がありません</h3>");
 
         footer(req, res);
         return;
       }
-    );
+
+      header(req, res);
+
+      res.write(`<h2>ユーザの投稿一覧画面 ${currentPage}ページ目</h2>`);
+      if (posts[0].profile_image) {
+        res.write(`<img src="${posts[0].profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+      } else {
+        res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+      }
+      // フォローするボタンの追加
+      if (user.is_following === 1) {
+        res.write("<span>フォロー済み</span>");
+        res.write(`<form action="/unfollow/${user.id}" method="post">`);
+        res.write('<button type="submit">フォロー解除</button>');
+        res.write("</form>");
+      } else if (user.id !== currentUserID) {
+        res.write(`<form action="/following/${user.id}" method="post">`);
+        res.write('<button type="submit">フォローする</button>');
+        res.write("</form>");
+      }
+      res.write(`<h2>${user.name}</h2>`);
+      res.write(`<h4>${escapeHTML(user.profile)}</h4><br>`);
+
+      res.write("<ul>");
+      for (let row of posts) {
+        res.write('<li style="border:1px solid #888; padding: 1em">');
+        if (row.is_deleted === 0) {
+          if (row.profile_image) {
+            res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+          } else {
+            res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+          }
+          res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
+          if (row.reply_to) {
+            res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`);
+          }
+          res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
+          if (row.image) {
+            res.write(
+              `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
+            );
+          }
+          res.write(`${row.date}<br>`);
+        } else {
+          res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`);
+        }
+        res.write("</li>\n");
+      }
+      res.write("</ul>");
+
+      //ページネーションのリンク
+      if (currentPage > 1) {
+        res.write(`<a href="/users/${userID}/${currentPage - 1}">前のページ</a>`);
+      }
+      res.write(`${currentPage}`);
+      if (parseInt(currentPage) * limit < totalCount) {
+        res.write(`<a href="/users/${userID}/${parseInt(currentPage) + 1}">次のページ</a>`);
+      }
+
+      footer(req, res);
+      return;
+    });
   });
 };
 
@@ -380,19 +312,13 @@ const showPost = (req, res, postID, currentUserID) => {
     res.write('<div style="border:1px solid #888; padding: 1em; margin: 1em">');
     if (row.is_deleted === 0) {
       if (row.profile_image) {
-        res.write(
-          `<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`
-        );
+        res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
       } else {
-        res.write(
-          `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-        );
+        res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
       }
       res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
       if (row.reply_to) {
-        res.write(
-          `<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`
-        );
+        res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`);
       }
       res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
       if (row.image) {
@@ -440,13 +366,9 @@ const showPost = (req, res, postID, currentUserID) => {
 
         if (row.is_deleted === 0) {
           if (row.profile_image) {
-            res.write(
-              `<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`
-            );
+            res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
           } else {
-            res.write(
-              `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-            );
+            res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
           }
           res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
           res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
@@ -479,20 +401,14 @@ const myPage = (req, res, currentUserID) => {
 
     res.write("<h2>マイプロフィール情報</h2>");
     if (user.profile_image) {
-      res.write(
-        `<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`
-      );
+      res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
     } else {
-      res.write(
-        `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-      );
+      res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
     }
     res.write(`<a href="/users/${user.id}/1">${user.name}</a><br>`);
     res.write(`メールアドレス：${user.email}<br>`);
     res.write(`紹介文：${escapeHTML(user.profile)}<br>`);
-    res.write(
-      '<h3><a href="/mypage/edit_profile">プロフィール編集</a></h3><br>'
-    );
+    res.write('<h3><a href="/mypage/edit_profile">プロフィール編集</a></h3><br>');
 
     res.write(`<form method="post" action="/logout">
     <button type="submit">ログアウト</button>
@@ -500,9 +416,7 @@ const myPage = (req, res, currentUserID) => {
 
     // 退会フォーム
     res.write("<h2>退会</h2>\n");
-    res.write(
-      '<form action="/mypage/withdrawal" method="post" onsubmit="return confirmWithdrawal()">'
-    );
+    res.write('<form action="/mypage/withdrawal" method="post" onsubmit="return confirmWithdrawal()">');
     res.write('<button type="submit">退会する</button>');
     res.write("</form>");
 
@@ -524,24 +438,14 @@ const editProfilePage = (req, res, currentUser) => {
   console.log("currentUser.profile:", currentUser.profile);
 
   res.write("<h2>プロフィール編集ページ</h2>\n");
-  res.write(
-    '<form action="/mypage/edit_profile" method="post" enctype="multipart/form-data">'
-  );
+  res.write('<form action="/mypage/edit_profile" method="post" enctype="multipart/form-data">');
   res.write(
     `<input type="text" name="user_name" placeholder="user_name" value="${currentUser.name}" pattern="^[0-9A-Za-z]+$"><br>`
   );
-  res.write(
-    `<input type="email" name="user_email" placeholder="e-mail" value="${currentUser.email}"><br>`
-  );
-  res.write(
-    '<input type="password" name="user_password" placeholder="password"><br>'
-  );
-  res.write(
-    `<textarea type="text" name="user_profile" placeholder="profile">${currentUser.profile}</textarea><br>`
-  );
-  res.write(
-    '<a>画像を投稿：</a><input type="file" name="user_image" accept="image/*" /><br>'
-  );
+  res.write(`<input type="email" name="user_email" placeholder="e-mail" value="${currentUser.email}"><br>`);
+  res.write('<input type="password" name="user_password" placeholder="password"><br>');
+  res.write(`<textarea type="text" name="user_profile" placeholder="profile">${currentUser.profile}</textarea><br>`);
+  res.write('<a>画像を投稿：</a><input type="file" name="user_image" accept="image/*" /><br>');
   res.write('<input type="submit" value="編集する">');
   res.write("</form>");
 
@@ -565,13 +469,9 @@ const followingUserPage = (req, res, currentUserID) => {
     for (let user of users) {
       res.write("<li>");
       if (user.profile_image) {
-        res.write(
-          `<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`
-        );
+        res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
       } else {
-        res.write(
-          `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-        );
+        res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
       }
       res.write(`<a href="/users/${user.id}/1">${user.name}</a>`);
       // フォローするボタンの追加
@@ -608,13 +508,9 @@ const followerUserPage = (req, res, currentUserID) => {
         .then((is_following) => {
           res.write("<li>");
           if (user.profile_image) {
-            res.write(
-              `<img src="${user.profile_image}" alt="プロフィール画像" style="width:80px; height:auto"/>`
-            );
+            res.write(`<img src="${user.profile_image}" alt="プロフィール画像" style="width:80px; height:auto"/>`);
           } else {
-            res.write(
-              `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-            );
+            res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
           }
           res.write(`<a href="/users/${user.id}/1">${user.name}</a>`);
 
@@ -687,13 +583,9 @@ const searchUserResultPage = (req, res, currentUserID, urlQueryParam) => {
     for (let user of users) {
       res.write("<li>");
       if (user.profile_image) {
-        res.write(
-          `<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`
-        );
+        res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
       } else {
-        res.write(
-          `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
-        );
+        res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
       }
       res.write(`<a href="/users/${user.id}/1">${user.name}</a>`);
       // フォローするボタンの追加

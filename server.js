@@ -18,24 +18,14 @@ const {
   readImageFile,
   notFoundPage,
 } = require("./pages");
+const { postPostPage, updateEditProfilePage, postWithdrawalUser } = require("./postUtils");
 const {
-  postPostPage,
-  updateEditProfilePage,
-  postWithdrawalUser,
-} = require("./postUtils");
-const {
-  // sessions,
   getCookies,
   postSignInPage,
   postSignUpPage,
   postLogout,
 } = require("./sessions");
-const {
-  searchSession,
-  updateSession,
-  deletePost,
-  db,
-} = require("./databaseUtils");
+const { searchSession, updateSession, deletePost, db } = require("./databaseUtils");
 const { followingUser, unfollowUser } = require("./followUtils");
 const path = require("path");
 
@@ -48,10 +38,6 @@ const server = http.createServer((req, res) => {
   res.setHeader("Content-Type", "text/html; charset=UTF-8"); //テキストを返す際、日本語を返すのでcharsetもセット・・・
 
   const cookieKey = "sessionID"; //クッキーに保存する際のキー
-  // セッションIDの取得
-  // const sessionID = req.headers.cookie
-  //   ? req.headers.cookie.split("=")[1]
-  //   : null;
   const cookies = getCookies(req.headers.cookie); //クッキーの全てのキーペアを取得
   const sessionID = cookies[cookieKey] || null; //該当のプロパティの値を取得
   console.log(`現在のcookieは→ ${sessionID}`);
@@ -66,11 +52,7 @@ const server = http.createServer((req, res) => {
 
     const parsedUrl = url.parse(req.url, true); //URLを解析し、オブジェクトとして取得
     // 【セッションチェック】(サインインorサインアップページじゃないページに飛ぼうとしたとき。さらにセッションが無い時に)
-    if (
-      parsedUrl.pathname !== "/sign_in" &&
-      parsedUrl.pathname !== "/sign_up" &&
-      !currentSession
-    ) {
+    if (parsedUrl.pathname !== "/sign_in" && parsedUrl.pathname !== "/sign_up" && !currentSession) {
       // ログインしていない場合、サインインページにリダイレクト
       res.writeHead(302, { Location: "/sign_in" });
       res.end();
@@ -78,26 +60,17 @@ const server = http.createServer((req, res) => {
     }
 
     // 【セッションチェック】逆に、サインインしている状態であれば、サインイン・サインアップページに飛ばないようにする。
-    if (
-      (parsedUrl.pathname === "/sign_in" ||
-        parsedUrl.pathname === "/sign_up") &&
-      currentSession
-    ) {
+    if ((parsedUrl.pathname === "/sign_in" || parsedUrl.pathname === "/sign_up") && currentSession) {
       // トップページにリダイレクト
       res.writeHead(302, { Location: "/" });
       res.end();
       return;
     }
 
-    // URLから取得された情報
-    // const id = req.url.split("/").pop(); //URLの一番後ろのIDを取得
-    // const secondID = req.url.split("/")[req.url.split("/").length - 2]; //URLの後ろから二番目のIDを取得
-    // const urlQueryParam = req.url.split("?").pop(); //URLのクエリパラメータを取得
-
     // URLから取得された情報(pathモジュールを活用)
     const id = parsedUrl.pathname.split("/").pop(); //URLの一番後ろのIDを取得
     const secondID = parsedUrl.pathname.split("/")[parsedUrl.pathname.split("/").length - 2]; //URLの後ろから二番目のIDを取得
-    const searchQueryKey = 'keyword'; //検索機能における、クエリパラメータのキー
+    const searchQueryKey = "keyword"; //検索機能における、クエリパラメータのキー
     const urlQueryParam = parsedUrl.query[searchQueryKey]; //URLのクエリパラメータ(valueのみ)を取得
 
     // 様々な制限。ここの数字を変えるだけで簡単に変更がかけられます
@@ -105,7 +78,6 @@ const server = http.createServer((req, res) => {
     const maxPostWordCount = 140; //ひとつの投稿の文字数制限
     const maxUserIdWordCount = 15; //ユーザ名の文字数制限
     const fileSizeLimit = 1048576; //アップロードされる画像のファイルサイズを制限(バイト)
-
 
     //ルーティング
     if (req.method === "GET") {
@@ -116,13 +88,7 @@ const server = http.createServer((req, res) => {
           topPage(req, res); //トップページ用の関数を呼んでいる
           break;
         case `/my_timeline/${id}`: //ログインしている人のタイムライン
-          myTimeLinePagenation(
-            req,
-            res,
-            currentSession.user_id,
-            id,
-            maxPostCount
-          ); //最後の引数は、ひとつのページに表示する投稿上限数
+          myTimeLinePagenation(req, res, currentSession.user_id, id, maxPostCount); //最後の引数は、ひとつのページに表示する投稿上限数
           break;
         case "/sign_up": //サインアップページ
           signUpPage(req, res);
@@ -134,14 +100,7 @@ const server = http.createServer((req, res) => {
           userIndexPage(req, res, currentSession.user_id);
           break;
         case `/users/${secondID}/${id}`: //任意のユーザの投稿だけ一覧で見れるページ
-          showUserPagePagenation(
-            req,
-            res,
-            currentSession.user_id,
-            secondID,
-            id,
-            maxPostCount
-          ); //最後の引数は、ひとつのページに表示する投稿上限数
+          showUserPagePagenation(req, res, currentSession.user_id, secondID, id, maxPostCount); //最後の引数は、ひとつのページに表示する投稿上限数
           break;
         case "/post": //投稿を行うページ
           postPage(req, res);
@@ -179,13 +138,7 @@ const server = http.createServer((req, res) => {
     } else if (req.method === "POST") {
       switch (req.url) {
         case "/post": //投稿する
-          postPostPage(
-            req,
-            res,
-            currentSession.user_id,
-            maxPostWordCount,
-            fileSizeLimit
-          );
+          postPostPage(req, res, currentSession.user_id, maxPostWordCount, fileSizeLimit);
           break;
         case `/delete/post/${id}`: //任意の投稿を削除する
           deletePost(req, res, id, currentSession.user_id);
@@ -205,7 +158,7 @@ const server = http.createServer((req, res) => {
             .then((updateUser) => {
               if (updateUser) {
                 console.log(`updatedUser = ${updateUser}`);
-                // sessions[sessionID] = updateUser; //アップデートしたユーザの情報をセッションに投入
+                //アップデートしたユーザの情報をセッションテーブルに投入
                 updateSession(sessionID, updateUser, (err) => {
                   if (err) {
                     console.error(err);
@@ -239,10 +192,7 @@ const server = http.createServer((req, res) => {
 
 // 例外処理によって、なにかエラーが起きたとしても最低限落ちないサーバーにします
 process.on("uncaughtException", (err) => {
-  console.log(
-    "！！！！！！！エラーが発生しました！！！！！！！でもサーバーは動き続けます・・・\n",
-    err
-  );
+  console.log("！！！！！！！エラーが発生しました！！！！！！！でもサーバーは動き続けます・・・\n", err);
 });
 
 // サーバー起動実行

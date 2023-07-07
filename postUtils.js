@@ -1,23 +1,11 @@
 const { header, footer } = require("./pageUtils");
-const {
-  updateSession,
-  insertPost,
-  updateUser,
-  withdrawalUser,
-  deletePost,
-} = require("./databaseUtils");
+const { updateSession, insertPost, updateUser, withdrawalUser, deletePost } = require("./databaseUtils");
 const { postLogout } = require("./sessions");
 const { escapeHTML } = require("./escapeHTML");
 const { extractBoundary, parseFormData } = require("./multipartFormDataParser");
 
 // 投稿する！(POST)
-const postPostPage = (
-  req,
-  res,
-  currentUserID,
-  maxPostWordCount,
-  fileSizeLimit
-) => {
+const postPostPage = (req, res, currentUserID, maxPostWordCount, fileSizeLimit) => {
   //まずはPOSTで送られたデータ（リクエストボディ）を受け取る
   //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
   let body = [];
@@ -37,18 +25,14 @@ const postPostPage = (
         const formData = parseFormData(body, boundary);
         // フォームデータの取得
         const { kakikomi, image, reply_to } = formData;
-        const kakikomiToString = kakikomi
-          ? Buffer.from(kakikomi, "binary").toString("utf-8")
-          : ""; //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
+        const kakikomiToString = kakikomi ? Buffer.from(kakikomi, "binary").toString("utf-8") : ""; //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
         // 投稿のXSS対策
         // const escapedKakikomi = kakikomiToString ? escapeHTML(kakikomiToString) : '';
 
         // 制限された最大文字数を超えた場合、DBに投入させません
         if (kakikomiToString.length > maxPostWordCount) {
           header(req, res);
-          res.write(
-            `<h2>投稿の文字数が${maxPostWordCount}字を超えています</h2>\n`
-          );
+          res.write(`<h2>投稿の文字数が${maxPostWordCount}字を超えています</h2>\n`);
           footer(req, res);
           return;
         }
@@ -56,9 +40,7 @@ const postPostPage = (
         // 投稿された画像があり、かつその画像のサイズが指定された容量を超えた場合、サーバーに保存させないし、DBにも投入させません
         if (image && Buffer.byteLength(image) > fileSizeLimit) {
           header(req, res);
-          res.write(
-            `<h2>投稿した画像のファイルサイズが${fileSizeLimit}biteを超えています</h2>\n`
-          );
+          res.write(`<h2>投稿した画像のファイルサイズが${fileSizeLimit}biteを超えています</h2>\n`);
           footer(req, res);
           return;
         }
@@ -67,11 +49,6 @@ const postPostPage = (
           //文字、もしくは画像の投稿がある場合、DB投入
           insertPost(kakikomiToString, image, reply_to, currentUserID)
             .then((imagePath) => {
-              //   res.write("<h2>ツイート（文字）投稿しました</h2>\n");
-              //   // res.write(`投稿内容: ${decodeURIComponent(escapedKakikomi)}`); //ここ脆弱性！
-              //   res.write(`投稿内容: ${escapeHTML(kakikomiToString)}`); //変にURLデコードする必要はない
-              //   res.write("<h2>ツイート（画像）投稿しました</h2>\n");
-              //   res.write(`画像パス: ${imagePath}`);
               res.writeHead(302, { Location: "/my_timeline/1" }); //自分のタイムラインにリダイレクト
               res.end();
               return;
@@ -95,13 +72,7 @@ const postPostPage = (
 };
 
 //（UPDATEだが使ってるhttpメソッドはPOST）プロフィール編集実行！
-const updateEditProfilePage = (
-  req,
-  res,
-  currentUser,
-  maxUserIdWordCount,
-  fileSizeLimit
-) => {
+const updateEditProfilePage = (req, res, currentUser, maxUserIdWordCount, fileSizeLimit) => {
   return new Promise((resolve, reject) => {
     //まずはPOSTで送られたデータを受け取る
     //dataイベントでPOSTされたデータがchunkに分けられてやってくるので、bodyに蓄積する
@@ -124,33 +95,13 @@ const updateEditProfilePage = (
           const formData = parseFormData(body, boundary);
 
           // フォームデータの取得
-          const {
-            user_name,
-            user_email,
-            user_password,
-            user_profile,
-            user_image,
-          } = formData;
-          const userNameToString = user_name
-            ? Buffer.from(user_name, "binary").toString("utf-8")
-            : null; //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
-          const userEmailToString = user_email
-            ? Buffer.from(user_email, "binary").toString("utf-8")
-            : null;
-          const userPasswordToString = user_password
-            ? Buffer.from(user_password, "binary").toString("utf-8")
-            : null;
-          const userProfileToString = user_profile
-            ? Buffer.from(user_profile, "binary").toString("utf-8")
-            : null;
+          const { user_name, user_email, user_password, user_profile, user_image } = formData;
+          const userNameToString = user_name ? Buffer.from(user_name, "binary").toString("utf-8") : null; //ここで、バイナリデータを正しく文字列に変換(日本語に対応)
+          const userEmailToString = user_email ? Buffer.from(user_email, "binary").toString("utf-8") : null;
+          const userPasswordToString = user_password ? Buffer.from(user_password, "binary").toString("utf-8") : null;
+          const userProfileToString = user_profile ? Buffer.from(user_profile, "binary").toString("utf-8") : null;
 
-          if (
-            !user_name &&
-            !user_email &&
-            !user_password &&
-            !user_profile &&
-            !user_image
-          ) {
+          if (!user_name && !user_email && !user_password && !user_profile && !user_image) {
             header(req, res);
             res.write("特になにも更新されませんでした");
             resolve(null); //特になにも入力されなかったらnullをresolve()の引数として渡す
@@ -175,8 +126,7 @@ const updateEditProfilePage = (
           }
 
           // メールアドレスのバリデーション
-          const emailRegex =
-            /^[a-zA-Z0-9_.+-]+@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.)+[a-zA-Z]{2,}$/; // メールアドレスの正規表現
+          const emailRegex = /^[a-zA-Z0-9_.+-]+@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.)+[a-zA-Z]{2,}$/; // メールアドレスの正規表現
           if (!emailRegex.test(userEmailToString) && userEmailToString) {
             // メールアドレスが正規表現にマッチしない場合
             header(req, res);
@@ -188,10 +138,7 @@ const updateEditProfilePage = (
 
           // パスワードのバリデーション
           const passwordRegex = /^[\w@!%*$#?&]+$/;
-          if (
-            !passwordRegex.test(userPasswordToString) &&
-            userPasswordToString
-          ) {
+          if (!passwordRegex.test(userPasswordToString) && userPasswordToString) {
             // パスワードが正規表現にマッチしない場合
             header(req, res);
             res.write("<h2>ユーザ情報の更新に失敗しました</h2>");
@@ -203,14 +150,12 @@ const updateEditProfilePage = (
           // 投稿された画像があり、かつその画像のサイズが指定された容量を超えた場合、サーバーに保存させないし、DBにも投入させません
           if (user_image && Buffer.byteLength(user_image) > fileSizeLimit) {
             header(req, res);
-            res.write(
-              `<h2>投稿した画像のファイルサイズが${fileSizeLimit}biteを超えています</h2>\n`
-            );
+            res.write(`<h2>投稿した画像のファイルサイズが${fileSizeLimit}biteを超えています</h2>\n`);
             footer(req, res);
             return;
           }
 
-          console.log('updateUserの直前です')
+          console.log("updateUserの直前です");
           // 現在ログインしているユーザの情報をアップデート
           updateUser(
             currentUser.user_id,
@@ -222,7 +167,6 @@ const updateEditProfilePage = (
             (err) => {
               if (err) {
                 header(req, res);
-                console.log("updateUserは回っているみたいinERROR");
                 console.error(err.message);
                 res.write("<h2>プロフィールの更新に失敗しました</h2><br>");
                 res.write(`<h4>${err.message}</h4>`);
@@ -231,27 +175,15 @@ const updateEditProfilePage = (
                 return;
               }
 
-              console.log("updateUserは回っているみたい");
               //新しいセッション情報
               const newProfile = {
                 user_id: currentUser.user_id,
                 name: userNameToString ? userNameToString : currentUser.name,
-                email: userEmailToString
-                  ? userEmailToString
-                  : currentUser.email,
-                profile: userProfileToString
-                  ? userProfileToString
-                  : currentUser.profile,
+                email: userEmailToString ? userEmailToString : currentUser.email,
+                profile: userProfileToString ? userProfileToString : currentUser.profile,
               };
 
-              console.log(
-                `updateEditProfilePage()の中のnewProfile = ${JSON.stringify(
-                  newProfile
-                )}`
-              );
-              //   res.write("<h2>プロフィールは更新されました</h2>");
               resolve(newProfile); // サーバ側のセッション情報を返り値にresolveの引数に渡す
-
               res.writeHead(302, { Location: "/mypage" });
               res.end();
               return;
