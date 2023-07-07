@@ -20,6 +20,7 @@ const {
   getFollowerUser,
   isFollowing,
 } = require("./followUtils");
+const { escapeHTML } = require("./escapeHTML");
 
 // サインアップページ
 const signUpPage = (req, res) => {
@@ -119,7 +120,7 @@ const myTimeLinePagenation = (req, res, currentUserID, currentPage, limit) => {
               `<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`
             );
           }
-          res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
+          res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
           if (row.image) {
             res.write(
               `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
@@ -256,7 +257,7 @@ const showUserPagePagenation = (
             res.write("</form>");
           }
           res.write(`<h2>${user.name}</h2>`);
-          res.write(`<h4>${user.profile}</h4>`);
+          res.write(`<h4>${escapeHTML(user.profile)}</h4>`);
           res.write("<h3>投稿がありません</h3>");
 
           footer(req, res);
@@ -287,7 +288,7 @@ const showUserPagePagenation = (
           res.write("</form>");
         }
         res.write(`<h2>${user.name}</h2>`);
-        res.write(`<h4>${user.profile}</h4><br>`);
+        res.write(`<h4>${escapeHTML(user.profile)}</h4><br>`);
 
         res.write("<ul>");
         for (let row of posts) {
@@ -308,7 +309,7 @@ const showUserPagePagenation = (
                 `<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`
               );
             }
-            res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
+            res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
             if (row.image) {
               res.write(
                 `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
@@ -393,7 +394,7 @@ const showPost = (req, res, postID, currentUserID) => {
           `<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`
         );
       }
-      res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
+      res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
       if (row.image) {
         res.write(
           `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
@@ -447,8 +448,8 @@ const showPost = (req, res, postID, currentUserID) => {
               `<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`
             );
           }
-          res.write(`<a href="/users/${row.user_id}">${row.name}</a><br>`);
-          res.write(`<a href="/post/${row.id}">${row.content}</a><br>`);
+          res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
+          res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
           if (row.image) {
             res.write(
               `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
@@ -488,7 +489,7 @@ const myPage = (req, res, currentUserID) => {
     }
     res.write(`<a href="/users/${user.id}/1">${user.name}</a><br>`);
     res.write(`メールアドレス：${user.email}<br>`);
-    res.write(`紹介文：${user.profile}<br>`);
+    res.write(`紹介文：${escapeHTML(user.profile)}<br>`);
     res.write(
       '<h3><a href="/mypage/edit_profile">プロフィール編集</a></h3><br>'
     );

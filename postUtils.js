@@ -1,16 +1,17 @@
 const { header, footer } = require('./pageUtils');
 const { updateSession, insertPost, updateUser, withdrawalUser, deletePost } = require('./databaseUtils');
 const { postLogout } = require('./sessions');
+const { escapeHTML } = require('./escapeHTML');
 
 // XSS(クロスサイトスクリプティング)対策
-const escapeHTML = (string) => {
-    return string.replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, "&#x27;")
-        .replace(/`/g, '&#x60;');
-}
+// const escapeHTML = (string) => {
+//     return string.replace(/&/g, '&amp;')
+//         .replace(/</g, '&lt;')
+//         .replace(/>/g, '&gt;')
+//         .replace(/"/g, '&quot;')
+//         .replace(/'/g, "&#x27;")
+//         .replace(/`/g, '&#x60;');
+// }
 
 // 投稿する！(POST)
 const postPostPage = (req, res, currentUserID, maxPostWordCount, fileSizeLimit) => {
@@ -63,10 +64,10 @@ const postPostPage = (req, res, currentUserID, maxPostWordCount, fileSizeLimit) 
             const { kakikomi, image, reply_to } = formData;
             const kakikomiToString = kakikomi ? Buffer.from(kakikomi, 'binary').toString('utf-8') : '';//ここで、バイナリデータを正しく文字列に変換(日本語に対応)
             // 投稿のXSS対策
-            const escapedKakikomi = kakikomiToString ? escapeHTML(kakikomiToString) : '';
+            // const escapedKakikomi = kakikomiToString ? escapeHTML(kakikomiToString) : '';
 
             // 制限された最大文字数を超えた場合、DBに投入させません
-            if (escapedKakikomi.length > maxPostWordCount) {
+            if (kakikomiToString.length > maxPostWordCount) {
                 res.write(`<h2>投稿の文字数が${maxPostWordCount}字を超えています</h2>\n`);
                 footer(req, res);
                 return;
@@ -79,12 +80,12 @@ const postPostPage = (req, res, currentUserID, maxPostWordCount, fileSizeLimit) 
                 return;
             }
 
-            if (escapedKakikomi || image) { //文字、もしくは画像の投稿がある場合、DB投入
-                insertPost(escapedKakikomi, image, reply_to, currentUserID)
+            if (kakikomiToString || image) { //文字、もしくは画像の投稿がある場合、DB投入
+                insertPost(kakikomiToString, image, reply_to, currentUserID)
                     .then((imagePath) => {
                         res.write('<h2>ツイート（文字）投稿しました</h2>\n');
                         // res.write(`投稿内容: ${decodeURIComponent(escapedKakikomi)}`); //ここ脆弱性！
-                        res.write(`投稿内容: ${escapedKakikomi}`); //変にURLデコードする必要はない
+                        res.write(`投稿内容: ${escapeHTML(kakikomiToString)}`); //変にURLデコードする必要はない
                         res.write('<h2>ツイート（画像）投稿しました</h2>\n');
                         res.write(`画像パス: ${imagePath}`);
                         footer(req, res);
