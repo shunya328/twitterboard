@@ -5,6 +5,7 @@ const db = new sqlite3.Database("twitterboardDatabase.db"); //sqliteデータベ
 //画像を保存するためのモジュールを読み込む
 const fs = require("fs");
 const path = require("path");
+const url = require('url');
 // cryptoモジュールの取り込み
 const crypto = require("crypto");
 // ランダム文字列のファイル名をつくるための関数を呼ぶ
@@ -416,9 +417,9 @@ const deletePost = (req, res, postID, currentUserID) => {
     // 現在のページにリダイレクト（直前のリクエストのURLにリダイレクト）
     const previousPageURL = req.headers.referer;
     console.log("deletePostが回りました");
-    res.writeHead(302, { Location: previousPageURL });
-    // res.end(JSON.stringify({ message: "投稿を削除しました" }));
-    return;
+    console.log(previousPageURL);
+    res.writeHead(301, { Location: previousPageURL });
+    res.end();
   });
 };
 

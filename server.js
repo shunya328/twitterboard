@@ -19,14 +19,10 @@ const {
   notFoundPage,
 } = require("./pages");
 const { postPostPage, updateEditProfilePage, postWithdrawalUser } = require("./postUtils");
-const {
-  getCookies,
-  postSignInPage,
-  postSignUpPage,
-  postLogout,
-} = require("./sessions");
+const { getCookies, postSignInPage, postSignUpPage, postLogout } = require("./sessions");
 const { searchSession, updateSession, deletePost, db } = require("./databaseUtils");
 const { followingUser, unfollowUser } = require("./followUtils");
+const { routing } = require("./routingFrame");
 const path = require("path");
 
 const hostname = "0.0.0.0";
@@ -34,14 +30,14 @@ const PORT = 3000;
 
 // httpサーバの定義
 const server = http.createServer((req, res) => {
-  res.statusCode = 200; //通信成功のステータスコード
+  res.statusCode = 200; //通信成功のステータスコー
   res.setHeader("Content-Type", "text/html; charset=UTF-8"); //テキストを返す際、日本語を返すのでcharsetもセット・・・
 
   const cookieKey = "sessionID"; //クッキーに保存する際のキー
   const cookies = getCookies(req.headers.cookie); //クッキーの全てのキーペアを取得
   const sessionID = cookies[cookieKey] || null; //該当のプロパティの値を取得
+  let isUrlMatch = false; // urlがルーティングでマッチしているかどうか判定
   console.log(`現在のcookieは→ ${sessionID}`);
-  console.log(req.url);
 
   // ここで、ユーザのクッキーに保存されているセッションIDを、sessionsテーブルと突合
   searchSession(sessionID, (err, sessionRecord) => {
@@ -80,113 +76,132 @@ const server = http.createServer((req, res) => {
     const maxUserIdWordCount = 15; //ユーザ名の文字数制限
     const fileSizeLimit = 1048576; //アップロードされる画像のファイルサイズを制限(バイト)
 
-    //ルーティング
+    // ルーティング（フレームワーク導入）。コールバック関数は最大2つまで呼べる(pathParam, queryParam)
+    // GETメソッドのルーティング
+    routing("GET", "/", req, () => {
+      topPage(req, res); //トップページ用の関数を呼んでいる
+      isUrlMatch = true;
+    });
+    routing("GET", "/my_timeline/:id", req, (pathParam) => {
+      myTimeLinePagenation(req, res, currentSession.user_id, pathParam.id, maxPostCount); //最後の引数は、ひとつのページに表示する投稿上限数
+      isUrlMatch = true;
+    });
+    routing("GET", "/sign_up", req, () => {
+      signUpPage(req, res); //サインアップページ
+      isUrlMatch = true;
+    });
+    routing("GET", "/sign_in", req, () => {
+      signInPage(req, res); //サインインページ
+      isUrlMatch = true;
+    });
+    routing("GET", "/users", req, () => {
+      userIndexPage(req, res, currentSession.user_id); // ユーザ一覧ページ
+      isUrlMatch = true;
+    });
+    routing("GET", "/users/:secondId/:id", req, (pathParam) => {
+      //任意のユーザの投稿だけ一覧で見れるページ
+      showUserPagePagenation(req, res, currentSession.user_id, pathParam.secondId, pathParam.id, maxPostCount); //最後の引数は、ひとつのページに表示する投稿上限数
+      isUrlMatch = true;
+    });
+    routing("GET", "/post", req, () => {
+      postPage(req, res); //投稿を行うページ
+      isUrlMatch = true;
+    });
+    routing("GET", "/post/:id", req, (pathParam) => {
+      showPost(req, res, pathParam.id, currentSession.user_id); // 任意の投稿の詳細画面（ここでリプライ表示）
+      isUrlMatch = true;
+    });
+    routing("GET", "/mypage", req, () => {
+      myPage(req, res, currentSession.user_id); //マイページ
+      isUrlMatch = true;
+    });
+    routing("GET", "/mypage/edit_profile", req, () => {
+      editProfilePage(req, res, currentSession); // 自分のユーザプロフィール情報の編集ページ
+      isUrlMatch = true;
+    });
+    routing("GET", "/following", req, () => {
+      followingUserPage(req, res, currentSession.user_id); //フォロー一覧
+      isUrlMatch = true;
+    });
+    routing("GET", "/followed", req, () => {
+      followerUserPage(req, res, currentSession.user_id); //フォロワー一覧
+      isUrlMatch = true;
+    });
+    routing("GET", "/search", req, () => {
+      searchPage(req, res, searchQueryKey); //検索フォームのページ
+      isUrlMatch = true;
+    });
+    routing("GET", "/search/users", req, (pathParam, queryParam) => {
+      searchUserResultPage(req, res, currentSession.user_id, queryParam[searchQueryKey]); //ユーザ検索をした結果のページ
+      isUrlMatch = true;
+    });
+    // GETメソッドでどのルーティングにも当たらなかった場合、notFoundページを表示
     if (req.method === "GET") {
-      switch (
-        req.url //リクエストされたurlが引数に入る
-      ) {
-        case "/": //TOPページ
-          topPage(req, res); //トップページ用の関数を呼んでいる
-          break;
-        case `/my_timeline/${id}`: //ログインしている人のタイムライン
-          myTimeLinePagenation(req, res, currentSession.user_id, id, maxPostCount); //最後の引数は、ひとつのページに表示する投稿上限数
-          break;
-        case "/sign_up": //サインアップページ
-          signUpPage(req, res);
-          break;
-        case "/sign_in": //サインインページ
-          signInPage(req, res);
-          break;6
-        case "/users": // ユーザ一覧ページ
-          userIndexPage(req, res, currentSession.user_id);
-          break;
-        case `/users/${secondID}/${id}`: //任意のユーザの投稿だけ一覧で見れるページ
-          showUserPagePagenation(req, res, currentSession.user_id, secondID, id, maxPostCount); //最後の引数は、ひとつのページに表示する投稿上限数
-          break;
-        case "/post": //投稿を行うページ
-          postPage(req, res);
-          break;
-        case `/post/${id}`: // 任意の投稿の詳細画面（ここでリプライ表示）
-          showPost(req, res, id, currentSession.user_id);
-          break;
-        case "/mypage": // マイページ
-          myPage(req, res, currentSession.user_id);
-          break;
-        case "/mypage/edit_profile": // 自分のユーザプロフィール情報の編集ページ
-          editProfilePage(req, res, currentSession);
-          break;
-        case "/following": //フォロー一覧
-          followingUserPage(req, res, currentSession.user_id);
-          break;
-        case "/followed": //フォロワー一覧
-          followerUserPage(req, res, currentSession.user_id);
-          break;
-        case "/search": //検索フォームのページ
-          searchPage(req, res, searchQueryKey);
-          break;
-        case `/search/users?${searchQueryKey}=${urlQueryParam}`: //ユーザ検索をした結果のページ
-          searchUserResultPage(req, res, currentSession.user_id, urlQueryParam);
-          break;
-        default:
-          // 画像ファイルを読み込む処理
-          if (req.url.startsWith("/public/")) {
-            readImageFile(req, res);
-          } else {
-            notFoundPage(req, res);
-          }
-          break;
+      if (req.url.startsWith("/public/")) {
+        readImageFile(req, res);
+      } else if (isUrlMatch === false) {
+        notFoundPage(req, res);
       }
-    } else if (req.method === "POST") {
-      switch (req.url) {
-        case "/post": //投稿する
-          postPostPage(req, res, currentSession.user_id, maxPostWordCount, fileSizeLimit);
-          break;
-        case `/delete/post/${id}`: //任意の投稿を削除する
-          deletePost(req, res, id, currentSession.user_id);
-          break;
-        case "/sign_up": //サインアップをする
-          postSignUpPage(req, res, maxUserIdWordCount, cookieKey);
-          break;
-        case "/sign_in": //サインインをする
-          postSignInPage(req, res, cookieKey);
-          break;
-        case "/logout": //ログアウトをする
-          postLogout(req, res, sessionID, cookieKey);
-          break;
-        case "/mypage/edit_profile": //自分のユーザ情報を変更する
-          // updateEditProfilePageをPromiseで実行
-          updateEditProfilePage(req, res, currentSession, maxUserIdWordCount, fileSizeLimit)
-            .then((updateUser) => {
-              if (updateUser) {
-                console.log(`updatedUser = ${updateUser}`);
-                //アップデートしたユーザの情報をセッションテーブルに投入
-                updateSession(sessionID, updateUser, (err) => {
-                  if (err) {
-                    console.error(err);
-                    return;
-                  }
-                  return;
-                });
+    }
+
+    // POSTメソッドのルーティング
+    routing("POST", "/post", req, () => {
+      postPostPage(req, res, currentSession.user_id, maxPostWordCount, fileSizeLimit); //投稿する
+      isUrlMatch = true;
+    });
+    routing("POST", "/delete/post/:id", req, (pathParam) => {
+      deletePost(req, res, pathParam.id, currentSession.user_id); //任意の投稿を削除する
+      isUrlMatch = true;
+    });
+    routing("POST", "/sign_up", req, () => {
+      postSignUpPage(req, res, maxUserIdWordCount, cookieKey); //サインアップをする
+      isUrlMatch = true;
+    });
+    routing("POST", "/sign_in", req, () => {
+      postSignInPage(req, res, cookieKey); //サインインをする
+      isUrlMatch = true;
+    });
+    routing("POST", "/logout", req, () => {
+      postLogout(req, res, sessionID, cookieKey); //ログアウトをする
+      isUrlMatch = true;
+    });
+    routing("POST", "/mypage/edit_profile", req, () => {
+      // updateEditProfilePageをPromiseで実行
+      updateEditProfilePage(req, res, currentSession, maxUserIdWordCount, fileSizeLimit)
+        .then((updateUser) => {
+          if (updateUser) {
+            console.log(`updatedUser = ${updateUser}`);
+            //アップデートしたユーザの情報をセッションテーブルに投入
+            updateSession(sessionID, updateUser, (err) => {
+              if (err) {
+                console.error(err);
+                return;
               }
-            })
-            .catch((error) => {
-              // エラーハンドリング
-              console.error(error);
+              return;
             });
-          break;
-        case "/mypage/withdrawal": //退会する
-          postWithdrawalUser(req, res, currentSession, sessionID);
-          break;
-        case `/following/${id}`: //任意のユーザをフォローする
-          followingUser(req, res, currentSession.user_id, id);
-          break;
-        case `/unfollow/${id}`: //任意のユーザのフォローを解除する
-          unfollowUser(req, res, currentSession.user_id, id);
-          break;
-        default:
-          notFoundPage(req, res);
-          break;
-      }
+          }
+        })
+        .catch((error) => {
+          // エラーハンドリング
+          console.error(error);
+        });
+      isUrlMatch = true;
+    });
+    routing("POST", "/mypage/withdrawal", req, () => {
+      postWithdrawalUser(req, res, currentSession, sessionID); //退会する
+      isUrlMatch = true;
+    });
+    routing("POST", "/following/:id", req, (pathParam) => {
+      followingUser(req, res, currentSession.user_id, pathParam.id); //任意のユーザをフォローする
+      isUrlMatch = true;
+    });
+    routing("POST", "/unfollow/:id", req, (pathParam) => {
+      unfollowUser(req, res, currentSession.user_id, pathParam.id); //任意のユーザのフォローを解除する
+      isUrlMatch = true;
+    });
+    // POSTメソッドでどのルーティングにも当たらなかった場合、notFoundページを表示
+    if (req.method === "POST" && isUrlMatch === false) {
+      notFoundPage(req, res);
     }
   });
 });

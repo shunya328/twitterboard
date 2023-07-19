@@ -1,10 +1,10 @@
-const { compareUrls } = require("./routingFrame");
+const { routing } = require("./routingFrame");
 
 // サンプル
-const defineUrl = "/users/:userId/true/:page/login/";
+const defineUrl = "/";
 const req = {
   method: "GET",
-  url: "/users/3/true/5/////////login///////?hoge=123",
+  url: "/",
 };
 
 const compareUrlsTest = () => {
@@ -13,8 +13,8 @@ const compareUrlsTest = () => {
   // test(false, compareUrls("users/:userId/:page", "users/3/5/7/3/3/3/3"))
   test(
     true,
-    compareUrls("GET", defineUrl, req, (isMatch, pathParam, queryParam) => {
-      console.log(`callback was called. pathParam=${pathParam}, isMatch=${isMatch}, queryParam=${queryParam.hoge}`);
+    compareUrls("GET", defineUrl, req, (pathParam, queryParam) => {
+      console.log(`callback was called. pathParam=${pathParam}`);
     })
   );
 };

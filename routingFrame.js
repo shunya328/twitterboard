@@ -9,7 +9,7 @@ const url = require("url");
 // };
 
 // '/'で区切られた文字列を配列として取り出し、配列の長さだけfor文で回し、それぞれの要素同士で正誤判定を行う
-const compareUrls = (httpMethod, defineUrl, req, callback) => {
+const routing = (httpMethod, defineUrl, req, callback) => {
   let isMatch = true; // ルーティングが成功したかの判定
   let pathParam = {}; // パスパラメータを格納するオブジェクト
   const integerRegex = /^\d+$/; // パスパラメータが数字かどうか判定するため、正の数字を正規表現で表したもの
@@ -20,7 +20,6 @@ const compareUrls = (httpMethod, defineUrl, req, callback) => {
   }
 
   // クエリパラメータの判定と格納を実装する必要がある
-  console.log("クエリパラメータのオブジェクトは次のとおりです", url.parse(req.url, true).query);
   const queryParam = url.parse(req.url, true).query;
 
   // 複数の連続した'/'を、ひとつの'/'にまとめる。そして、最初の'?'より左側のurl部分のみ抜き出す。
@@ -41,12 +40,11 @@ const compareUrls = (httpMethod, defineUrl, req, callback) => {
     if(i === 0 && !definePart && !reqPart){continue}
 
     // :idのような部分のパスパラメータが正の整数であれば、pathParamに追加する
-    if (definePart.startsWith(":") && integerRegex.test(reqPart)) {
+    if (definePart && definePart.startsWith(":") && integerRegex.test(reqPart)) {
       pathParam = {
         ...pathParam,
         [definePart.split(':')[1]]:parseInt(reqPart)
       }
-      console.log(pathParam);
       continue;
     }
 
@@ -56,11 +54,11 @@ const compareUrls = (httpMethod, defineUrl, req, callback) => {
   }
 
   if (isMatch) {
-    callback(isMatch, pathParam, queryParam);
+    callback(pathParam, queryParam);
     return isMatch;
   }
 };
 
 module.exports = {
-  compareUrls,
+  routing,
 };
