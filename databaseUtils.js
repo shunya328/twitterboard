@@ -5,7 +5,6 @@ const db = new sqlite3.Database("twitterboardDatabase.db"); //sqliteデータベ
 //画像を保存するためのモジュールを読み込む
 const fs = require("fs");
 const path = require("path");
-const { generateSessionID } = require("./generateSessionID"); //ランダムな文字列を生み出す関数
 // cryptoモジュールの取り込み
 const crypto = require("crypto");
 // ランダム文字列のファイル名をつくるための関数を呼ぶ

@@ -41,6 +41,7 @@ const server = http.createServer((req, res) => {
   const cookies = getCookies(req.headers.cookie); //クッキーの全てのキーペアを取得
   const sessionID = cookies[cookieKey] || null; //該当のプロパティの値を取得
   console.log(`現在のcookieは→ ${sessionID}`);
+  console.log(req.url);
 
   // ここで、ユーザのクッキーに保存されているセッションIDを、sessionsテーブルと突合
   searchSession(sessionID, (err, sessionRecord) => {
@@ -95,7 +96,7 @@ const server = http.createServer((req, res) => {
           break;
         case "/sign_in": //サインインページ
           signInPage(req, res);
-          break;
+          break;6
         case "/users": // ユーザ一覧ページ
           userIndexPage(req, res, currentSession.user_id);
           break;

@@ -412,7 +412,7 @@ const myPage = (req, res, currentUserID) => {
 
     res.write(`<form method="post" action="/logout">
     <button type="submit">ログアウト</button>
-  </form>`);
+    </form>`);
 
     // 退会フォーム
     res.write("<h2>退会</h2>\n");

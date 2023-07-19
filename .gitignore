@@ -139,3 +139,6 @@ public/user_images/
 
 # prettierの設定ファイル
 .prettierrc
+
+# configフォルダ
+config/
