@@ -1,13 +1,5 @@
 const url = require("url");
 
-// // サンプル
-// const defineUrl = "users/:userId/:page";
-// // const reqUrl = "users/3/5";
-// const req = {
-//   method: "GET",
-//   url: "users/37/3/",
-// };
-
 // '/'で区切られた文字列を配列として取り出し、配列の長さだけfor文で回し、それぞれの要素同士で正誤判定を行う
 const routing = (httpMethod, defineUrl, req, callback) => {
   let isMatch = true; // ルーティングが成功したかの判定

@@ -12,19 +12,27 @@ const {
 } = require("./databaseUtils");
 const { getFollowingUser, getFollowerUser, isFollowing } = require("./followUtils");
 const { escapeHTML } = require("./escapeHTML");
+const { e, render } = require("./newViewFrame");
 
 // サインアップページ
 const signUpPage = (req, res) => {
   beforeLoginHeader(req, res);
 
-  res.write("<h2>サインアップ</h2>");
-  res.write('<form action="/sign_up" method="post">');
-  res.write('<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$" required><br>');
-  res.write('<input type="email" name="user_email" placeholder="e-mail" required><br>');
-  res.write('<input type="password" name="user_password" placeholder="password" required><br>');
-  res.write('<input type="submit" value="サインアップ">');
-  res.write("</form>");
-  res.write('<a href="/sign_in">サインインする</a><br>');
+render(res,
+  e('div', {}, [
+    e('h2', {}, ['サインアップ']),
+    e('form', {'action': '/sign_up', 'method':'post'}, [
+      e('input', {'type':'text', 'name':'user_name', 'placeholder':'user_name', 'pattern':'^[0-9A-Za-z]+$', 'required':'required'}, ['']),
+      e('br',{},['']),
+      e('input', {'type':'email', 'name':'user_email', 'placeholder':'e-mail', 'required':'required'}, ['']),
+      e('br',{},['']),
+      e('input', {'type':'password', 'name':'user_password', 'placeholder':'password', 'required':'required'}, ['']),
+      e('br',{},['']),
+      e('input', {'type':'submit', 'value':'サインアップ'}, ['']),
+    ]),
+    e('a', {'href':'/sign_in'}, ['サインインする'])
+  ])
+  )
 
   beforeLoginFooter(req, res);
   return;
@@ -34,13 +42,19 @@ const signUpPage = (req, res) => {
 const signInPage = (req, res) => {
   beforeLoginHeader(req, res);
 
-  res.write("<h2>サインイン</h2>");
-  res.write('<form action="/sign_in" method="post">');
-  res.write('<input type="text" name="user_name" placeholder="user_name" pattern="^[0-9A-Za-z]+$" required><br>');
-  res.write('<input type="password" name="user_password" placeholder="password" required><br>');
-  res.write('<input type="submit" value="サインイン">');
-  res.write("</form>");
-  res.write('<a href="/sign_up">新規登録</a>');
+  render(res,
+    e('div', {}, [
+      e('h2', {}, ['サインイン']),
+      e('form', {'action': '/sign_in', 'method':'post'}, [
+        e('input', {'type':'text', 'name':'user_name', 'placeholder':'user_name', 'pattern':'^[0-9A-Za-z]+$', 'required':'required'}, ['']),
+        e('br',{},['']),
+        e('input', {'type':'password', 'name':'user_password', 'placeholder':'password', 'required':'required'}, ['']),
+        e('br',{},['']),
+        e('input', {'type':'submit', 'value':'サインイン'}, ['']),
+      ]),
+      e('a', {'href':'/sign_up'}, ['新規登録'])
+    ])
+    )
 
   beforeLoginFooter(req, res);
   return;
