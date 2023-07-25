@@ -188,118 +188,106 @@ const userIndexPage = async (req, res, currentUserID) => {
 };
 
 // ユーザ詳細画面（ページネーション機能あり）
-const showUserPagePagenation = (req, res, currentUserID, userID, currentPage, limit) => {
-  findUserByUserID(currentUserID, userID, (err, user) => {
-    if (err) {
-      console.error(err.message);
-      header(req, res);
-      res.write("エラーが発生しました");
-      footer(req, res);
-      return;
+const showUserPagePagenation = async (req, res, currentUserID, userID, currentPage, limit) => {
+  const users = await findUserByUserID(currentUserID, userID);
+  const user = users[0];
+
+  if (!user || user.is_deleted === 1) {
+    header(req, res);
+    res.write("ユーザが存在しません");
+    footer(req, res);
+    return;
+  }
+
+  const obj = await getAllPostOfUserPagenation(userID, currentPage, limit);
+  const { posts, totalCount } = obj;
+
+  if (posts.length === 0) {
+    header(req, res);
+    if (user.profile_image) {
+      res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+    } else {
+      res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
     }
-
-    if (!user || user.is_deleted === 1) {
-      header(req, res);
-      res.write("ユーザが存在しません");
-      footer(req, res);
-      return;
+    // フォローするボタンの追加
+    if (user.is_following === 1) {
+      res.write("<span>フォロー済み</span>");
+      res.write(`<form action="/unfollow/${user.id}" method="post">`);
+      res.write('<button type="submit">フォロー解除</button>');
+      res.write("</form>");
+    } else if (user.id !== currentUserID) {
+      res.write(`<form action="/following/${user.id}" method="post">`);
+      res.write('<button type="submit">フォローする</button>');
+      res.write("</form>");
     }
+    res.write(`<h2>${user.name}</h2>`);
+    res.write(`<h4>${escapeHTML(user.profile)}</h4>`);
+    res.write("<h3>投稿がありません</h3>");
 
-    getAllPostOfUserPagenation(userID, currentPage, limit, (err, posts, totalCount) => {
-      if (err) {
-        console.error(err.message);
-        header(req, res);
-        res.write("エラーが発生しました");
-        footer(req, res);
-        return;
-      } else if (posts.length === 0) {
-        header(req, res);
-        if (user.profile_image) {
-          res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
-        } else {
-          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
-        }
-        // フォローするボタンの追加
-        if (user.is_following === 1) {
-          res.write("<span>フォロー済み</span>");
-          res.write(`<form action="/unfollow/${user.id}" method="post">`);
-          res.write('<button type="submit">フォロー解除</button>');
-          res.write("</form>");
-        } else if (user.id !== currentUserID) {
-          res.write(`<form action="/following/${user.id}" method="post">`);
-          res.write('<button type="submit">フォローする</button>');
-          res.write("</form>");
-        }
-        res.write(`<h2>${user.name}</h2>`);
-        res.write(`<h4>${escapeHTML(user.profile)}</h4>`);
-        res.write("<h3>投稿がありません</h3>");
+    footer(req, res);
+    return;
+  }
 
-        footer(req, res);
-        return;
-      }
+  header(req, res);
 
-      header(req, res);
+  res.write(`<h2>ユーザの投稿一覧画面 ${currentPage}ページ目</h2>`);
+  if (posts[0].profile_image) {
+    res.write(`<img src="${posts[0].profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+  } else {
+    res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+  }
+  // フォローするボタンの追加
+  if (user.is_following === 1) {
+    res.write("<span>フォロー済み</span>");
+    res.write(`<form action="/unfollow/${user.id}" method="post">`);
+    res.write('<button type="submit">フォロー解除</button>');
+    res.write("</form>");
+  } else if (user.id !== currentUserID) {
+    res.write(`<form action="/following/${user.id}" method="post">`);
+    res.write('<button type="submit">フォローする</button>');
+    res.write("</form>");
+  }
+  res.write(`<h2>${user.name}</h2>`);
+  res.write(`<h4>${escapeHTML(user.profile)}</h4><br>`);
 
-      res.write(`<h2>ユーザの投稿一覧画面 ${currentPage}ページ目</h2>`);
-      if (posts[0].profile_image) {
-        res.write(`<img src="${posts[0].profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+  res.write("<ul>");
+  for (let row of posts) {
+    res.write('<li style="border:1px solid #888; padding: 1em">');
+    if (row.is_deleted === 0) {
+      if (row.profile_image) {
+        res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
       } else {
         res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
       }
-      // フォローするボタンの追加
-      if (user.is_following === 1) {
-        res.write("<span>フォロー済み</span>");
-        res.write(`<form action="/unfollow/${user.id}" method="post">`);
-        res.write('<button type="submit">フォロー解除</button>');
-        res.write("</form>");
-      } else if (user.id !== currentUserID) {
-        res.write(`<form action="/following/${user.id}" method="post">`);
-        res.write('<button type="submit">フォローする</button>');
-        res.write("</form>");
+      res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
+      if (row.reply_to) {
+        res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`);
       }
-      res.write(`<h2>${user.name}</h2>`);
-      res.write(`<h4>${escapeHTML(user.profile)}</h4><br>`);
+      res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
+      if (row.image) {
+        res.write(
+          `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
+        );
+      }
+      res.write(`${row.date}<br>`);
+    } else {
+      res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`);
+    }
+    res.write("</li>\n");
+  }
+  res.write("</ul>");
 
-      res.write("<ul>");
-      for (let row of posts) {
-        res.write('<li style="border:1px solid #888; padding: 1em">');
-        if (row.is_deleted === 0) {
-          if (row.profile_image) {
-            res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
-          } else {
-            res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
-          }
-          res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
-          if (row.reply_to) {
-            res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`);
-          }
-          res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
-          if (row.image) {
-            res.write(
-              `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
-            );
-          }
-          res.write(`${row.date}<br>`);
-        } else {
-          res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`);
-        }
-        res.write("</li>\n");
-      }
-      res.write("</ul>");
+  //ページネーションのリンク
+  if (currentPage > 1) {
+    res.write(`<a href="/users/${userID}/${currentPage - 1}">前のページ</a>`);
+  }
+  res.write(`${currentPage}`);
+  if (parseInt(currentPage) * limit < totalCount) {
+    res.write(`<a href="/users/${userID}/${parseInt(currentPage) + 1}">次のページ</a>`);
+  }
 
-      //ページネーションのリンク
-      if (currentPage > 1) {
-        res.write(`<a href="/users/${userID}/${currentPage - 1}">前のページ</a>`);
-      }
-      res.write(`${currentPage}`);
-      if (parseInt(currentPage) * limit < totalCount) {
-        res.write(`<a href="/users/${userID}/${parseInt(currentPage) + 1}">次のページ</a>`);
-      }
-
-      footer(req, res);
-      return;
-    });
-  });
+  footer(req, res);
+  return;
 };
 
 // 投稿ページ(GET)
@@ -415,45 +403,41 @@ const showPost = (req, res, postID, currentUserID) => {
 };
 
 // マイページ
-const myPage = (req, res, currentUserID) => {
-  findUserByUserID(currentUserID, currentUserID, (err, user) => {
-    if (err) {
-      // エラーハンドリングを行う
-      console.error(err.message);
-      return;
-    }
-    header(req, res);
+const myPage = async (req, res, currentUserID) => {
+  const users = await findUserByUserID(currentUserID, currentUserID);
+  const user = users[0];
 
-    res.write("<h2>マイプロフィール情報</h2>");
-    if (user.profile_image) {
-      res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
-    } else {
-      res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
-    }
-    res.write(`<a href="/users/${user.id}/1">${user.name}</a><br>`);
-    res.write(`メールアドレス：${user.email}<br>`);
-    res.write(`紹介文：${escapeHTML(user.profile)}<br>`);
-    res.write('<h3><a href="/mypage/edit_profile">プロフィール編集</a></h3><br>');
+  header(req, res);
 
-    res.write(`<form method="post" action="/logout">
+  res.write("<h2>マイプロフィール情報</h2>");
+  if (user.profile_image) {
+    res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+  } else {
+    res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+  }
+  res.write(`<a href="/users/${user.id}/1">${user.name}</a><br>`);
+  res.write(`メールアドレス：${user.email}<br>`);
+  res.write(`紹介文：${escapeHTML(user.profile)}<br>`);
+  res.write('<h3><a href="/mypage/edit_profile">プロフィール編集</a></h3><br>');
+
+  res.write(`<form method="post" action="/logout">
     <button type="submit">ログアウト</button>
     </form>`);
 
-    // 退会フォーム
-    res.write("<h2>退会</h2>\n");
-    res.write('<form action="/mypage/withdrawal" method="post" onsubmit="return confirmWithdrawal()">');
-    res.write('<button type="submit">退会する</button>');
-    res.write("</form>");
+  // 退会フォーム
+  res.write("<h2>退会</h2>\n");
+  res.write('<form action="/mypage/withdrawal" method="post" onsubmit="return confirmWithdrawal()">');
+  res.write('<button type="submit">退会する</button>');
+  res.write("</form>");
 
-    // 退会アラートのJavaScriopt関数
-    res.write("<script>");
-    res.write("function confirmWithdrawal() {");
-    res.write('  return confirm("本当に退会しますか？");');
-    res.write("}");
-    res.write("</script>");
+  // 退会アラートのJavaScriopt関数
+  res.write("<script>");
+  res.write("function confirmWithdrawal() {");
+  res.write('  return confirm("本当に退会しますか？");');
+  res.write("}");
+  res.write("</script>");
 
-    footer(req, res);
-  });
+  footer(req, res);
 };
 
 // プロフィール編集ページ（GET）

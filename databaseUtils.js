@@ -107,73 +107,31 @@ const setSession = (session_id, user_id, user_name, user_email, user_profile, us
 };
 
 //受け取ったセッションIDのデータを探して突合
-const searchSession = (sessionID, callback) => {
-  db.get(
-    `
-  SELECT * FROM sessions WHERE session_id = ?  
-  `,
-    [sessionID],
-    (err, row) => {
-      if (err) {
-        callback(err, null);
-        return;
-      }
-      callback(null, row);
-    }
-  );
+const searchSession = async (sessionID) => {
+  const prepare = sql`
+  SELECT * FROM sessions WHERE session_id = '${sessionID}' 
+  `
+  return await prepare.execQuery(db,'get');
 };
 
 //受け取ったセッションIDのデータを探してレコードを削除
-const deleteSession = (sessionID, callback) => {
-  db.run(
-    `
-  DELETE FROM sessions WHERE session_id = ?
-  `,
-    [sessionID],
-    (err) => {
-      if (err) {
-        console.error(err);
-        return;
-      }
-      callback(null);
-    }
-  );
+const deleteSession = async (sessionID) => {
+  const prepare = sql`
+  DELETE FROM sessions WHERE session_id = '${sessionID}'
+  `
+
+  return await prepare.execQuery(db, 'run');
 };
 
 //受け取ったセッションIDのレコードを探し、アップデートする
-const updateSession = (sessionID, newUserProfile, callback) => {
+const updateSession = async (sessionID, newUserProfile) => {
   const { user_id, name, email, profile } = newUserProfile;
-  db.run(
-    `
-UPDATE sessions SET user_id = ?, name = ?, email = ?, profile = ? WHERE session_id = ?
-`,
-    [user_id, name, email, profile, sessionID],
-    (err) => {
-      if (err) {
-        console.error(err);
-        return;
-      }
-      callback(null);
-    }
-  );
-};
 
-//データベースから全投稿データを取得する関数（ついでにユーザデータも引っ張っています）
-const getAllPosts = (callback) => {
-  db.all(
-    `SELECT posts.id, posts.content, posts.is_deleted, posts.reply_to, posts.image, posts.date,
-  users.id AS user_id, users.name, users.email, users.profile, users.profile_image
-   FROM posts
-   INNER JOIN users ON posts.user_id = users.id`,
-    [],
-    (err, rows) => {
-      if (err) {
-        callback(err, null);
-        return;
-      }
-      callback(null, rows);
-    }
-  );
+  const prepare = sql`
+  UPDATE sessions SET user_id = ${user_id}, name = '${name}', email = '${email}', profile = '${profile}' WHERE session_id = '${sessionID}'
+  `
+  
+  return await prepare.execQuery(db, 'run');
 };
 
 // 自分のタイムライン取得、ページネーション対応
@@ -213,92 +171,38 @@ const getMyTimelinePostsPagenation = async (currentUserID, currentPage, limit) =
   };
 };
 
-// データベースから、あるユーザのすべての投稿を取得する関数
-const getAllPostOfUser = (userID, callback) => {
-  db.all(
-    `
-  SELECT posts.*, users.name, users.profile, users.profile_image, users.is_deleted AS user_is_deleted
-  FROM posts
-  INNER JOIN users ON posts.user_id = users.id
-  WHERE posts.user_id = ?
-  ORDER BY posts.date DESC
-  `,
-    [userID],
-    (err, rows) => {
-      if (err) {
-        console.error(err.message);
-        callback(err, null);
-        return;
-      }
-      callback(null, rows);
-    }
-  );
-};
-
 // データベースから、あるユーザの全ての投稿を取得する関数（ページネーション機能込み）
-const getAllPostOfUserPagenation = (userID, currentPage, limit, callback) => {
+const getAllPostOfUserPagenation = async (userID, currentPage, limit) => {
   const offset = (currentPage - 1) * limit;
 
-  //まずはレコード数を取得
-  db.get(
-    `
+  const prepare1 = sql`
   SELECT COUNT(*) AS total_count
   FROM posts
   INNER JOIN users ON posts.user_id = users.id
-  WHERE posts.user_id = ?
-  `,
-    [userID],
-    (err, result) => {
-      if (err) {
-        console.error(err.message);
-        callback(err, null);
-        return;
-      }
-      const totalCount = result.total_count; //レコード数をここに格納
+  WHERE posts.user_id = ${userID}
+  `
 
-      //ページネーションに対応したレコードだけを取得
-      db.all(
-        `
-    SELECT posts.*, users.name, users.profile, users.profile_image, users.is_deleted AS user_is_deleted
-    FROM posts
-    INNER JOIN users ON posts.user_id = users.id
-    WHERE posts.user_id = ?
-    ORDER BY posts.date DESC
-    LIMIT ? OFFSET ?
-    `,
-        [userID, limit, offset],
-        (err, rows) => {
-          if (err) {
-            console.error(err.message);
-            callback(err, null);
-            return;
-          }
-          callback(null, rows, totalCount); //レコード数もコールバックの引数に渡す
-        }
-      );
-    }
-  );
+  const prepare2 = sql`
+  SELECT posts.*, users.name, users.profile, users.profile_image, users.is_deleted AS user_is_deleted
+  FROM posts
+  INNER JOIN users ON posts.user_id = users.id
+  WHERE posts.user_id = ${userID}
+  ORDER BY posts.date DESC
+  LIMIT ${limit} OFFSET ${offset}
+  `
+
+  const result = await prepare1.execQuery(db, 'get');
+  const totalCount = result.total_count;
+  const rows = await prepare2.execQuery(db, 'all');
+
+  return {
+    totalCount: totalCount,
+    posts: rows
+  }
 };
 
 //データベースから全ユーザデータを取得する関数。ログイン中のユーザがフォローしているユーザかどうかを判定
 const getAllUsers = async (currentUserID) => {
-  // db.all(
-  //   `SELECT users.*,
-  // CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
-  // FROM users
-  // LEFT JOIN relationships
-  // ON relationships.follower_id = ? AND relationships.followed_id = users.id
-  // WHERE users.is_deleted = 0`,
-  //   [currentUserID],
-  //   (err, rows) => {
-  //     if (err) {
-  //       callback(err, null);
-  //       return;
-  //     }
-  //     callback(null, rows);
-  //   }
-  // );
-
   const prepare = sql`
   SELECT users.*,
   CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
@@ -313,7 +217,8 @@ const getAllUsers = async (currentUserID) => {
 
 //データベースに文字＆画像を同時に投稿する関数
 const insertPost = (content, image, reply_to, currentUserID) => {
-  return new Promise((resolve, reject) => {
+  return new Promise( async (resolve, reject) => {
+    let imagePathInDB = null;
     if (image) {
       //　画像の前準備
       const fileName = getFileName("jpg"); //ランダムな文字列を画像の名前にする
@@ -323,34 +228,40 @@ const insertPost = (content, image, reply_to, currentUserID) => {
       const imagePath = path.join(__dirname, "public", "post_images", fileName); //画像の保存先
       fs.writeFileSync(imagePath, image, "binary"); //画像を保存する
       // "/public/post_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
-      const imagePathInDB = imagePath.replace(/.*\/public\//, "/public/");
+      imagePathInDB = imagePath.replace(/.*\/public\//, "/public/");
+    
 
       // データベースに投稿の情報を格納
-      db.run(
-        `INSERT INTO posts (user_id, content, image, reply_to) VALUES (?, ?, ?, ?)`,
-        [currentUserID, content, imagePathInDB, reply_to],
-        (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(imagePathInDB);
-          }
-        }
-      );
-    } else {
+      // db.run(
+      //   `INSERT INTO posts (user_id, content, image, reply_to) VALUES (?, ?, ?, ?)`,
+      //   [currentUserID, content, imagePathInDB, reply_to],
+      //   (err) => {
+      //     if (err) {
+      //       reject(err);
+      //     } else {
+      //       resolve(imagePathInDB);
+      //     }
+      //   }
+      // );
+
+      const reply = reply_to ? reply_to : null;
+
+      const prepare = sql`
+      INSERT INTO posts (user_id, content, image, reply_to) VALUES (${currentUserID}, '${content}', '${imagePathInDB}', ${reply})
+      `
+      await prepare.execQuery(db, 'run');
+      return resolve(imagePathInDB);
+
+    }else {
       const imagePathInDB = null;
-      // データベースに投稿の情報を格納
-      db.run(
-        `INSERT INTO posts (user_id, content, image, reply_to) VALUES (?, ?, ?, ?)`,
-        [currentUserID, content, imagePathInDB, reply_to],
-        (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(imagePathInDB);
-          }
-        }
-      );
+
+      const reply = reply_to ? reply_to : null;
+
+      const prepare = sql`
+      INSERT INTO posts (user_id, content, image, reply_to) VALUES (${currentUserID}, '${content}', ${imagePathInDB}, ${reply})
+      `
+      await prepare.execQuery(db, 'run');
+      return resolve(imagePathInDB);
     }
   });
 };
@@ -617,25 +528,17 @@ const findUserSignUp = (userName, userEmail, userPassword, callback) => {
 };
 
 // ユーザIDを使ってデータベースからユーザを検索する(自身がフォローしているかどうかも取得)
-const findUserByUserID = (currentUserID, userID, callback) => {
-  db.all(
-    `
+const findUserByUserID = async (currentUserID, userID) => {
+  const prepare = sql`
   SELECT users.*,
   CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
   FROM users
   LEFT JOIN relationships
-  ON relationships.follower_id = ? AND relationships.followed_id = users.id
-  WHERE users.is_deleted = 0 AND users.id = ?
-  `,
-    [currentUserID, userID],
-    (err, rows) => {
-      if (err) {
-        callback(err);
-        return;
-      }
-      callback(null, rows[0]);
-    }
-  );
+  ON relationships.follower_id = ${currentUserID} AND relationships.followed_id = users.id
+  WHERE users.is_deleted = 0 AND users.id = ${userID}
+  `
+
+  return await prepare.execQuery(db, 'all');
 };
 
 // 検索ワードを使って、ユーザ名と突合し(あいまい検索)、データベースからユーザを検索する
@@ -686,9 +589,7 @@ module.exports = {
   searchSession,
   deleteSession,
   updateSession,
-  getAllPosts,
   getMyTimelinePostsPagenation,
-  getAllPostOfUser,
   getAllPostOfUserPagenation,
   getAllUsers,
   insertPost,

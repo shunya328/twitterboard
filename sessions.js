@@ -194,22 +194,17 @@ const postSignUpPage = (req, res, maxUserIdWordCount, cookieKey) => {
 };
 
 // ログアウトのPOSTメソッド
-const postLogout = (req, res, sessionID, cookieKey) => {
-
+const postLogout = async (req, res, sessionID, cookieKey) => {
   // セッションIDでsessionsテーブルと突合し、該当のレコードを削除
-  deleteSession(sessionID, (err) => {
-    if (err) {
-      console.error(err.message);
-      return;
-    }
-    // クッキーを削除
-    res.setHeader("Set-Cookie", `${cookieKey}=; Path=/;`);
+  await deleteSession(sessionID);
 
-    // サインインページにリダイレクト
-    res.writeHead(302, { Location: "/sign_in" });
-    res.end();
-    return;
-  });
+  // クッキーを削除
+  res.setHeader("Set-Cookie", `${cookieKey}=; Path=/;`);
+
+  // サインインページにリダイレクト
+  res.writeHead(302, { Location: "/sign_in" });
+  res.end();
+  return;
 };
 
 module.exports = {
