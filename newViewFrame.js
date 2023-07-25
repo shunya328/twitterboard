@@ -27,17 +27,6 @@ const e = (tag, attribute, children) => {
 return obj;
 };
 
-const isTrue = {
-  isTrue: false,
-};
-
-const document = e('h1', {'class': isTrue.isTrue ? 'red' : 'black', 'hoge':'fuga'}, [
-    e('h2',{},isTrue.isTrue ? ['<>Trueだよ<>'] : [
-        e('h3', {}, ['false!!!','なんで？'])
-    ]),
-    'hogehoge'
-])
-
 // JSON形式(今回はjavascriptのオブジェクト形式)をHTML形式に変換
 const renderDocument = (document) => {
     const {tag, attribute, children} = document;
@@ -53,11 +42,10 @@ const renderDocument = (document) => {
                 return renderDocument(child);
             }
         });
-        // return `${element}${childElement}</${tag}>`;
         if(singleHTMLTag.includes(tag)){
             return `${element}${childElement.join('')}`
         }else{
-            return `${element}${childElement.join('')}</${tag}>`; // 修正: childElementを文字列として結合
+            return `${element}${childElement.join('')}</${tag}>`; // childElementを文字列として結合
         }
     }
 }
@@ -66,9 +54,26 @@ const render = (res, param) => {
     res.write(renderDocument(param));
 }
 
-// console.log(renderDocument(document));
+// 角さん作
+const div = (param, children) => {
+    if (arguments.length === 0) {
+        param = {};
+        children = [];
+    }
+    if  (arguments.length === 1) {
+        if (param instanceof Array) {
+            children = param;
+            param = {};
+        }
+        else {
+            children = [];
+        }
+    }
+    return e('div', param, children);
+}
 
 module.exports = {
     e,
+    div,
     render
 }

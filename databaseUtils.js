@@ -5,11 +5,13 @@ const db = new sqlite3.Database("twitterboardDatabase.db"); //sqliteデータベ
 //画像を保存するためのモジュールを読み込む
 const fs = require("fs");
 const path = require("path");
-const url = require('url');
+const url = require("url");
 // cryptoモジュールの取り込み
 const crypto = require("crypto");
 // ランダム文字列のファイル名をつくるための関数を呼ぶ
 const { getFileName } = require("./getRandomString");
+// Modelを呼ぶ
+const { sql } = require("./modelFrame");
 
 // パスワードのハッシュ化とソルト生成を行う関数
 const hashPasswordWithSalt = (password) => {
@@ -175,55 +177,40 @@ const getAllPosts = (callback) => {
 };
 
 // 自分のタイムライン取得、ページネーション対応
-const getMyTimelinePostsPagenation = (currentUserID, currentPage, limit, callback) => {
+const getMyTimelinePostsPagenation = async (currentUserID, currentPage, limit) => {
   const offset = (currentPage - 1) * limit;
 
-  // まず、対象となる投稿の全レコード数を取得する
-  db.get(
-    `
-      SELECT COUNT(DISTINCT posts.id) AS total_count
-      FROM posts
-      INNER JOIN users ON posts.user_id = users.id
-      LEFT JOIN relationships ON posts.user_id = relationships.followed_id
-      WHERE (posts.user_id =? OR relationships.follower_id = ?)
-      `,
-    [currentUserID, currentUserID],
-    (err, result) => {
-      if (err) {
-        console.error(err.message);
-        callback(err, null);
-        return;
-      }
-      const totalCount = result.total_count; //レコード数をここに格納
+  const prepare1 = sql`
+  SELECT COUNT(DISTINCT posts.id) AS total_count
+  FROM posts
+  INNER JOIN users ON posts.user_id = users.id
+  LEFT JOIN relationships ON posts.user_id = relationships.followed_id
+  WHERE (posts.user_id =${currentUserID} OR relationships.follower_id = ${currentUserID})
+  `;
 
-      // ページネーションに対応した、対象となる投稿だけを取得(自身とフォローしているユーザの投稿のみ取得)
-      db.all(
-        `
-      SELECT posts.*, users.name, users.profile_image
-      FROM posts
-      INNER JOIN users ON posts.user_id = users.id
-      WHERE (posts.user_id = ?)
-      UNION
-      SELECT posts.*, users.name, users.profile_image
-      FROM posts
-      INNER JOIN relationships ON posts.user_id = relationships.followed_id
-      INNER JOIN users ON posts.user_id = users.id
-      WHERE (relationships.follower_id = ?)
-      ORDER BY posts.date DESC
-      LIMIT ? OFFSET ?
-      `,
-        [currentUserID, currentUserID, limit, offset],
-        (err, rows) => {
-          if (err) {
-            console.error(err.message);
-            callback(err, null);
-            return;
-          }
-          callback(null, rows, totalCount); //レコード数もコールバックの引数に渡す
-        }
-      );
-    }
-  );
+  const prepare2 = sql`
+  SELECT posts.*, users.name, users.profile_image
+  FROM posts
+  INNER JOIN users ON posts.user_id = users.id
+  WHERE (posts.user_id = ${currentUserID})
+  UNION
+  SELECT posts.*, users.name, users.profile_image
+  FROM posts
+  INNER JOIN relationships ON posts.user_id = relationships.followed_id
+  INNER JOIN users ON posts.user_id = users.id
+  WHERE (relationships.follower_id = ${currentUserID})
+  ORDER BY posts.date DESC
+  LIMIT ${limit} OFFSET ${offset}
+  `;
+  
+  const result = await prepare1.execQuery(db, "get");
+  const totalCount = result.total_count;
+  const posts = await prepare2.execQuery(db, "all");
+
+  return {
+    posts: posts,
+    totalCount: totalCount,
+  };
 };
 
 // データベースから、あるユーザのすべての投稿を取得する関数
@@ -294,23 +281,34 @@ const getAllPostOfUserPagenation = (userID, currentPage, limit, callback) => {
 };
 
 //データベースから全ユーザデータを取得する関数。ログイン中のユーザがフォローしているユーザかどうかを判定
-const getAllUsers = (currentUserID, callback) => {
-  db.all(
-    `SELECT users.*,
+const getAllUsers = async (currentUserID) => {
+  // db.all(
+  //   `SELECT users.*,
+  // CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
+  // FROM users
+  // LEFT JOIN relationships
+  // ON relationships.follower_id = ? AND relationships.followed_id = users.id
+  // WHERE users.is_deleted = 0`,
+  //   [currentUserID],
+  //   (err, rows) => {
+  //     if (err) {
+  //       callback(err, null);
+  //       return;
+  //     }
+  //     callback(null, rows);
+  //   }
+  // );
+
+  const prepare = sql`
+  SELECT users.*,
   CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
   FROM users
   LEFT JOIN relationships
-  ON relationships.follower_id = ? AND relationships.followed_id = users.id
-  WHERE users.is_deleted = 0`,
-    [currentUserID],
-    (err, rows) => {
-      if (err) {
-        callback(err, null);
-        return;
-      }
-      callback(null, rows);
-    }
-  );
+  ON relationships.follower_id = ${currentUserID} AND relationships.followed_id = users.id
+  WHERE users.is_deleted = 0
+  `;
+
+  return await prepare.execQuery(db, "all");
 };
 
 //データベースに文字＆画像を同時に投稿する関数
