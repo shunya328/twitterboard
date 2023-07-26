@@ -11,30 +11,35 @@ const sql = (strings, ...values) => {
     }
   }
 
-  const execQuery = function (db, method, data) {
+  const execQuery = function (db, method, param) {
     return new Promise((resolve, reject) => {
+
       switch (method) {
         case "all":
-          db.all(sqlQuery, (err, rows) => {
+          db.all(sqlQuery, param, (err, rows) => {
+
             if (err) {
               return reject(err);
             }
-            return resolve(rows);
+            resolve(rows);
           });
+          break;
         case "get":
-          db.get(sqlQuery, (err, row) => {
+          db.get(sqlQuery,param, (err, row) => {
             if (err) {
               return reject(err);
             }
-            return resolve(row);
+            resolve(row);
           });
+          break;
         case "run":
-          db.run(sqlQuery, (err) => {
+          db.run(sqlQuery, param, (err) => {
             if (err) {
               return reject(err);
             }
-            return resolve(null);
+            resolve(null);
           });
+          break;
       }
     });
   };

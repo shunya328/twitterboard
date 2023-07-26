@@ -41,6 +41,8 @@ const server = http.createServer(async (req, res) => {
 
   // ここで、ユーザのクッキーに保存されているセッションIDを、sessionsテーブルと突合
   const currentSession = await searchSession(sessionID);
+  
+  console.log('currentSessionID:  ', currentSession ? currentSession.id: null);
 
   const parsedUrl = url.parse(req.url, true); //URLを解析し、オブジェクトとして取得
   // 【セッションチェック】(サインインorサインアップページじゃないページに飛ぼうとしたとき。さらにセッションが無い時に)

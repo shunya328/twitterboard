@@ -307,99 +307,91 @@ const postPage = (req, res, data) => {
 };
 
 // 投稿の詳細画面(GET)
-const showPost = (req, res, postID, currentUserID) => {
-  // id=postIDのレコードをとってくる！
-  getOnePost(req, res, postID, (err, row) => {
-    if (err) {
-      // エラーが発生した場合の処理
-      res.statusCode = err.statusCode || 500;
-      header(req, res);
-      res.write(err.message);
-      footer(req, res);
-      return;
-    }
-    header(req, res);
+const showPost = async (req, res, postID, currentUserID) => {
+  const row = await getOnePost(postID);
 
-    res.write(`<h1>投稿詳細画面</h1>`);
-    // 特定の投稿をここに表示
-    res.write('<div style="border:1px solid #888; padding: 1em; margin: 1em">');
-    if (row.is_deleted === 0) {
-      if (row.profile_image) {
-        res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
-      } else {
-        res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
-      }
-      res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
-      if (row.reply_to) {
-        res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`);
-      }
-      res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
-      if (row.image) {
-        res.write(
-          `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
-        );
-      }
-      res.write(`${row.date}<br>`);
-      if (row.user_id === currentUserID) {
-        //もし投稿したユーザがログイン中ユーザなら、削除ボタンを表示
-        res.write(`
+  header(req, res);
+
+  res.write(`<h1>投稿詳細画面</h1>`);
+  // 特定の投稿をここに表示
+  res.write('<div style="border:1px solid #888; padding: 1em; margin: 1em">');
+  if (row.is_deleted === 0) {
+    if (row.profile_image) {
+      res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+    } else {
+      res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
+    }
+    res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
+    if (row.reply_to) {
+      res.write(`<a href="/post/${row.reply_to}">この投稿</a>へのリプライです<br>`);
+    }
+    res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
+    if (row.image) {
+      res.write(
+        `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
+      );
+    }
+    res.write(`${row.date}<br>`);
+    if (row.user_id === currentUserID) {
+      //もし投稿したユーザがログイン中ユーザなら、削除ボタンを表示
+      res.write(`
           <form action="/delete/post/${row.id}" method="post">
             <button type="submit">投稿削除</button>
           </form>
         `);
-      }
-    } else {
-      res.write(`<a href="/post/${row.id}">投稿は削除されています</a>`);
     }
-    res.write("</div>");
+  } else {
+    res.write(`<a href="/post/${row.id}">投稿は削除されています</a>`);
+  }
+  res.write("</div>");
 
-    // この投稿に対するリプライをする欄です
-    res.write("<h1>リプライを送る</h1>");
-    res.write(`<form action="/post" method="post" enctype="multipart/form-data">
+  // この投稿に対するリプライをする欄です
+  res.write("<h1>リプライを送る</h1>");
+  res.write(`<form action="/post" method="post" enctype="multipart/form-data">
     <textarea name="kakikomi" style="width:80%;height:100px"></textarea><br>
     <a>画像を投稿：</a><input type="file" name="image" accept="image/*" /><br>
     <input type="hidden" name="reply_to" value="${postID}" />
     <input type="submit" value="投稿" />
     </form>`);
 
-    // 投稿に基づくリプライを取得
-    getReplyPost(req, res, postID, (err, rows) => {
-      if (err) {
-        // エラーが発生した場合の処理
-        res.statusCode = err.statusCode || 500;
-        res.end(err.message);
-        return;
-      }
+  // 投稿に基づくリプライを取得
+  // getReplyPost(req, res, postID, (err, rows) => {
+  //   if (err) {
+  //     // エラーが発生した場合の処理
+  //     res.statusCode = err.statusCode || 500;
+  //     res.end(err.message);
+  //     return;
+  //   }
+    const rows = await getReplyPost(postID);
 
-      res.write("<h2>リプライたち</h2>");
+    res.write("<h2>リプライたち</h2>");
 
-      // ここにrowsの数だけforループしてそれぞれの投稿を表示するコードを実装！！
-      for (let row of rows) {
-        res.write('<li style="border:1px solid #888; padding: 1em">');
+    // ここにrowsの数だけforループしてそれぞれの投稿を表示するコードを実装！！
+    for (let row of rows) {
+      res.write('<li style="border:1px solid #888; padding: 1em">');
 
-        if (row.is_deleted === 0) {
-          if (row.profile_image) {
-            res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
-          } else {
-            res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
-          }
-          res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
-          res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
-          if (row.image) {
-            res.write(
-              `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
-            );
-          }
-          res.write(`${row.date}<br>`);
+      if (row.is_deleted === 0) {
+        if (row.profile_image) {
+          res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
         } else {
-          res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`);
+          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
         }
-
-        res.write("</li>\n");
+        res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
+        res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
+        if (row.image) {
+          res.write(
+            `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
+          );
+        }
+        res.write(`${row.date}<br>`);
+      } else {
+        res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`);
       }
-      footer(req, res);
-    });
-  });
+
+      res.write("</li>\n");
+    }
+    footer(req, res);
+  // });
 };
 
 // マイページ

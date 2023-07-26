@@ -109,18 +109,24 @@ const setSession = (session_id, user_id, user_name, user_email, user_profile, us
 //受け取ったセッションIDのデータを探して突合
 const searchSession = async (sessionID) => {
   const prepare = sql`
-  SELECT * FROM sessions WHERE session_id = '${sessionID}' 
-  `
-  return await prepare.execQuery(db,'get');
+  SELECT * FROM sessions WHERE session_id = $sessionID
+  `;
+  const param = {
+    $sessionID: sessionID,
+  };
+  return await prepare.execQuery(db, "get", param);
 };
 
 //受け取ったセッションIDのデータを探してレコードを削除
 const deleteSession = async (sessionID) => {
   const prepare = sql`
-  DELETE FROM sessions WHERE session_id = '${sessionID}'
-  `
+  DELETE FROM sessions WHERE session_id = $sessionID
+  `;
+  const param = {
+    $sessionID: sessionID,
+  };
 
-  return await prepare.execQuery(db, 'run');
+  return await prepare.execQuery(db, "run", param);
 };
 
 //受け取ったセッションIDのレコードを探し、アップデートする
@@ -128,10 +134,17 @@ const updateSession = async (sessionID, newUserProfile) => {
   const { user_id, name, email, profile } = newUserProfile;
 
   const prepare = sql`
-  UPDATE sessions SET user_id = ${user_id}, name = '${name}', email = '${email}', profile = '${profile}' WHERE session_id = '${sessionID}'
-  `
-  
-  return await prepare.execQuery(db, 'run');
+  UPDATE sessions SET user_id = $user_id , name = $name , email = $email , profile = $profile WHERE session_id = $sessionID
+  `;
+  const param = {
+    $user_id: user_id,
+    $name: name,
+    $email: email,
+    $profile: profile,
+    $sessionID: sessionID,
+  };
+
+  return await prepare.execQuery(db, "run", param);
 };
 
 // 自分のタイムライン取得、ページネーション対応
@@ -143,27 +156,35 @@ const getMyTimelinePostsPagenation = async (currentUserID, currentPage, limit) =
   FROM posts
   INNER JOIN users ON posts.user_id = users.id
   LEFT JOIN relationships ON posts.user_id = relationships.followed_id
-  WHERE (posts.user_id =${currentUserID} OR relationships.follower_id = ${currentUserID})
+  WHERE (posts.user_id = $currentUserID OR relationships.follower_id = $currentUserID )
   `;
+  const param1 = {
+    $currentUserID: currentUserID,
+  };
 
   const prepare2 = sql`
   SELECT posts.*, users.name, users.profile_image
   FROM posts
   INNER JOIN users ON posts.user_id = users.id
-  WHERE (posts.user_id = ${currentUserID})
+  WHERE (posts.user_id = $currentUserID )
   UNION
   SELECT posts.*, users.name, users.profile_image
   FROM posts
   INNER JOIN relationships ON posts.user_id = relationships.followed_id
   INNER JOIN users ON posts.user_id = users.id
-  WHERE (relationships.follower_id = ${currentUserID})
+  WHERE (relationships.follower_id = $currentUserID )
   ORDER BY posts.date DESC
-  LIMIT ${limit} OFFSET ${offset}
+  LIMIT $limit OFFSET $offset
   `;
-  
-  const result = await prepare1.execQuery(db, "get");
+  const param2 = {
+    $currentUserID: currentUserID,
+    $limit: limit,
+    $offset: offset,
+  };
+
+  const result = await prepare1.execQuery(db, "get", param1);
   const totalCount = result.total_count;
-  const posts = await prepare2.execQuery(db, "all");
+  const posts = await prepare2.execQuery(db, "all", param2);
 
   return {
     posts: posts,
@@ -180,7 +201,10 @@ const getAllPostOfUserPagenation = async (userID, currentPage, limit) => {
   FROM posts
   INNER JOIN users ON posts.user_id = users.id
   WHERE posts.user_id = ${userID}
-  `
+  `;
+  const param1 = {
+    $userID: userID,
+  };
 
   const prepare2 = sql`
   SELECT posts.*, users.name, users.profile, users.profile_image, users.is_deleted AS user_is_deleted
@@ -189,16 +213,21 @@ const getAllPostOfUserPagenation = async (userID, currentPage, limit) => {
   WHERE posts.user_id = ${userID}
   ORDER BY posts.date DESC
   LIMIT ${limit} OFFSET ${offset}
-  `
+  `;
+  const param2 = {
+    $userID: userID,
+    $limit: limit,
+    $offset: offset,
+  };
 
-  const result = await prepare1.execQuery(db, 'get');
+  const result = await prepare1.execQuery(db, "get", param1);
   const totalCount = result.total_count;
-  const rows = await prepare2.execQuery(db, 'all');
+  const rows = await prepare2.execQuery(db, "all", param2);
 
   return {
     totalCount: totalCount,
-    posts: rows
-  }
+    posts: rows,
+  };
 };
 
 //データベースから全ユーザデータを取得する関数。ログイン中のユーザがフォローしているユーザかどうかを判定
@@ -208,16 +237,19 @@ const getAllUsers = async (currentUserID) => {
   CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
   FROM users
   LEFT JOIN relationships
-  ON relationships.follower_id = ${currentUserID} AND relationships.followed_id = users.id
+  ON relationships.follower_id = $currentUserID AND relationships.followed_id = users.id
   WHERE users.is_deleted = 0
   `;
+  const param = {
+    $currentUserID: currentUserID,
+  };
 
-  return await prepare.execQuery(db, "all");
+  return await prepare.execQuery(db, "all", param);
 };
 
 //データベースに文字＆画像を同時に投稿する関数
 const insertPost = (content, image, reply_to, currentUserID) => {
-  return new Promise( async (resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     let imagePathInDB = null;
     if (image) {
       //　画像の前準備
@@ -229,278 +261,236 @@ const insertPost = (content, image, reply_to, currentUserID) => {
       fs.writeFileSync(imagePath, image, "binary"); //画像を保存する
       // "/public/post_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
       imagePathInDB = imagePath.replace(/.*\/public\//, "/public/");
-    
-
-      // データベースに投稿の情報を格納
-      // db.run(
-      //   `INSERT INTO posts (user_id, content, image, reply_to) VALUES (?, ?, ?, ?)`,
-      //   [currentUserID, content, imagePathInDB, reply_to],
-      //   (err) => {
-      //     if (err) {
-      //       reject(err);
-      //     } else {
-      //       resolve(imagePathInDB);
-      //     }
-      //   }
-      // );
-
-      const reply = reply_to ? reply_to : null;
-
-      const prepare = sql`
-      INSERT INTO posts (user_id, content, image, reply_to) VALUES (${currentUserID}, '${content}', '${imagePathInDB}', ${reply})
-      `
-      await prepare.execQuery(db, 'run');
-      return resolve(imagePathInDB);
-
-    }else {
-      const imagePathInDB = null;
-
-      const reply = reply_to ? reply_to : null;
-
-      const prepare = sql`
-      INSERT INTO posts (user_id, content, image, reply_to) VALUES (${currentUserID}, '${content}', ${imagePathInDB}, ${reply})
-      `
-      await prepare.execQuery(db, 'run');
-      return resolve(imagePathInDB);
     }
+    const reply = reply_to ? reply_to : null;
+
+    const prepare = sql`
+      INSERT INTO posts (user_id, content, image, reply_to) VALUES ($currentUserID, $content, $imagePathInDB, $reply)
+      `;
+    const param = {
+      $currentUserID: currentUserID,
+      $content: content,
+      $imagePathInDB: imagePathInDB,
+      $reply: reply,
+    };
+
+    await prepare.execQuery(db, "run", param);
+    return resolve(imagePathInDB);
   });
 };
 
 // データベース上の特定の投稿を取ってくる関数
-const getOnePost = (req, res, postID, callback) => {
-  db.get(
-    `SELECT posts.*, users.name, users.profile_image
+const getOnePost = async (postID) => {
+  const prepare = sql`
+  SELECT posts.*, users.name, users.profile_image
   FROM posts
   INNER JOIN users ON posts.user_id = users.id
-  WHERE posts.id = ?`,
-    [postID],
-    (err, row) => {
-      if (err) {
-        console.error(err.message);
-        callback(err, null);
-        return;
-      }
+  WHERE posts.id = $postID
+  `;
+  const param = {
+    $postID: postID,
+  };
 
-      if (!row) {
-        const error = new Error("お探しの投稿は見つかりませんでした");
-        error.statusCode = 404;
-        callback(error, null);
-        return;
-      }
-
-      callback(null, row);
-    }
-  );
+  return await prepare.execQuery(db, "get", param);
 };
 
 // データベース上の特定の投稿に紐づくリプライをすべて取得する関数
-const getReplyPost = (req, res, postID, callback) => {
-  db.all(
-    `SELECT posts.*, users.name, users.profile_image
+const getReplyPost = async (postID) => {
+  const prepare = sql`
+  SELECT posts.*, users.name, users.profile_image
   FROM posts
   INNER JOIN users ON posts.user_id = users.id
-  WHERE posts.reply_to = ?
-  `,
-    [postID],
-    (err, rows) => {
-      if (err) {
-        console.error(err.message);
-        callback(err, null);
-        return;
-      }
-      callback(null, rows);
-    }
-  );
+  WHERE posts.reply_to = $postID
+  `;
+  const param = {
+    $postID: postID,
+  };
+
+  return await prepare.execQuery(db, "all", param);
 };
 
 //データベースの特定の投稿を削除する関数(論理削除)
-const deletePost = (req, res, postID, currentUserID) => {
-  db.run(`UPDATE posts SET is_deleted = 1 WHERE id = ? AND user_id = ?`, [postID, currentUserID], (err) => {
-    if (err) {
-      console.error(err.message);
-      // エラーハンドリングを行う
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "投稿を削除できませんでした" }));
-      return;
-    }
-    // 現在のページにリダイレクト（直前のリクエストのURLにリダイレクト）
-    const previousPageURL = req.headers.referer;
-    console.log("deletePostが回りました");
-    console.log(previousPageURL);
-    res.writeHead(301, { Location: previousPageURL });
-    res.end();
-  });
+const deletePost = async (req, res, postID, currentUserID) => {
+  const prepare = sql`
+  UPDATE posts SET is_deleted = 1 WHERE id = $postID AND user_id = $currentUserID
+  `;
+  const param = {
+    $postID: postID,
+    $currentUserID: currentUserID,
+  };
+
+  await prepare.execQuery(db, "run", param);
+  // 現在のページにリダイレクト（直前のリクエストのURLにリダイレクト）
+  const previousPageURL = req.headers.referer;
+  console.log("deletePostが回りました");
+  console.log(previousPageURL);
+  res.writeHead(301, { Location: previousPageURL });
+  res.end();
 };
 
 //データベースに新たにユーザ情報を登録する関数
-const insertUser = (userName, userEmail, userPassword, callback) => {
+const insertUser = async (userName, userEmail, userPassword, callback) => {
   //パスワードをハッシュ化し、ソルト値も取得
   const { hashedPassword, salt } = hashPasswordWithSalt(userPassword);
 
-  //じつはこのオブジェクトの宣言なくてもうまく動く気がする
-  const isUserNameDuplicate = { value: false };
-  const isUserEmailDuplicate = { value: false };
-  //ユーザ名の重複チェック
-  db.get("SELECT COUNT (*) AS count FROM users WHERE name = ?", [userName], (err, row) => {
-    if (err) {
-      callback(err);
-      return;
-    }
-    if (row.count > 0) {
-      console.log("row.count:", row.count);
-      const error = new Error("同じユーザ名が既に存在しています");
-      callback(error);
-      isUserNameDuplicate.value = true;
-      return;
-    }
-    //メールアドレスの重複チェック
-    db.get("SELECT COUNT (*) AS count FROM users WHERE email = ?", [userEmail], (err, row) => {
-      if (err) {
-        callback(err);
-        return;
-      }
-      if (row.count > 0) {
-        const error = new Error("同じメールアドレスが既に存在しています");
-        callback(error);
-        isUserEmailDuplicate.value = true;
-        return;
-      }
-      //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを新規登録
-      if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
-        db.run(
-          `INSERT INTO users (
-              name, email, password, salt
-              ) VALUES (?, ?, ?, ?)`,
-          [userName, userEmail, hashedPassword, salt],
-          (err) => {
-            if (err) {
-              callback(err);
-              return;
-            }
-            callback(null);
-          }
-        );
-      }
-    });
-  });
+  // ユーザ名の重複チェック
+  const userPrepare = sql`
+  SELECT COUNT (*) AS count FROM users WHERE name = $userName
+  `;
+  const userParam = {
+    $userName: userName,
+  };
+
+  const nameCheckRow = await userPrepare.execQuery(db, "get", userParam);
+
+  if (nameCheckRow.count > 0) {
+    const error = new Error("同じユーザ名が既に存在しています");
+    callback(error);
+    return;
+  }
+
+  // メールアドレスの重複チェック
+  const emailPrepare = sql`
+  SELECT COUNT (*) AS count FROM users WHERE email = $userEmail
+  `;
+  const emailParam = {
+    $userEmail: userEmail,
+  };
+  const emailCheckRow = await emailPrepare.execQuery(db, "get", emailParam);
+  if (emailCheckRow.count > 0) {
+    const error = new Error("同じメールアドレスが既に存在しています");
+    callback(error);
+    return;
+  }
+
+  // ユーザ情報の新規登録
+  const prepare = sql`
+    INSERT INTO users (
+      name, email, password, salt
+      ) VALUES ($userName, $userEmail, $hashedPassword, $salt)
+    `;
+  const param = {
+    $userName: userName,
+    $userEmail: userEmail,
+    $hashedPassword: hashedPassword,
+    $salt: salt,
+  };
+  await prepare.execQuery(db, "run", param);
+  callback(null);
 };
 
 //データベース上のユーザ情報を変更する関数
-const updateUser = (userID, userName, userEmail, userPassword, userProfile, userImage, callback) => {
+const updateUser = async (userID, userName, userEmail, userPassword, userProfile, userImage, callback) => {
   //パスワードをハッシュ化し、ソルト値も取得
   const { hashedPassword, salt } = userPassword ? hashPasswordWithSalt(userPassword) : "";
 
-  const isUserNameDuplicate = { value: false };
-  const isUserEmailDuplicate = { value: false };
-  console.log("updateUserは回っているみたいinupdateUser");
+  // ユーザ名の重複チェック
+  const userPrepare = sql`
+    SELECT COUNT (*) AS count FROM users WHERE name = $userName  AND id != $userID
+    `;
+  const userParam = {
+    $userName: userName,
+    $userID: userID,
+  };
 
-  //ユーザ名の重複チェック
-  db.get("SELECT COUNT (*) AS count FROM users WHERE name = ? AND id != ?", [userName, userID], (err, row) => {
-    if (err) {
-      callback(err);
-      return;
-    }
-    if (row.count > 0) {
-      const error = new Error("同じユーザ名が既に存在しています");
-      callback(error);
-      isUserNameDuplicate.value = true;
-      return;
-    }
+  const nameCheckRow = await userPrepare.execQuery(db, "get", userParam);
 
-    //メールアドレスの重複チェック
-    db.get("SELECT COUNT (*) AS count FROM users WHERE email = ? AND id != ?", [userEmail, userID], (err, row) => {
-      if (err) {
-        callback(err);
-        return;
-      }
-      if (row.count > 0) {
-        const error = new Error("同じメールアドレスが既に存在しています");
-        callback(error);
-        isUserEmailDuplicate.value = true;
-        return;
-      }
+  if (nameCheckRow.count > 0) {
+    const error = new Error("同じユーザ名が既に存在しています");
+    callback(error);
+    return;
+  }
 
-      //ユーザ名・メールのどちらにも重複がない場合、ユーザデータを更新
-      if (!isUserNameDuplicate.value && !isUserEmailDuplicate.value) {
-        //ユーザ名、メール、プロフィールはそのまま書き込む
-        db.run(
-          `
-            UPDATE users SET name = ?, email = ?, profile = ? WHERE id =?
-            `,
-          [userName, userEmail, userProfile, userID],
-          (err) => {
-            if (err) {
-              callback(err);
-              return;
-            }
+  // メールアドレスの重複チェック
+  const emailPrepare = sql`
+    SELECT COUNT (*) AS count FROM users WHERE email = $userEmail AND id != $userID
+    `;
+  const emailParam = {
+    $userEmail: userEmail,
+    $userID: userID,
+  };
+  const emailCheckRow = await emailPrepare.execQuery(db, "get", emailParam);
+  if (emailCheckRow.count > 0) {
+    const error = new Error("同じメールアドレスが既に存在しています");
+    callback(error);
+    return;
+  }
 
-            //ここから、パスワードの有無&画像の有無によって条件分岐
-            if (userImage) {
-              //　画像の前準備
-              const fileName = getFileName("jpg"); //ランダムな文字列を画像の名前にする
-              fs.mkdirSync(path.join(__dirname, "public", "user_images"), {
-                recursive: true,
-              }); //保存先ディレクトリがない場合、作る
-              const imagePath = path.join(__dirname, "public", "user_images", fileName); //画像の保存先
-              fs.writeFileSync(imagePath, userImage, "binary"); //画像を保存する
-              // "/public/user_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
-              const imagePathInDB = imagePath.replace(/.*\/public\//, "/public/");
+  // 重複がない場合、ユーザデータを更新するが、画像の変更の有無と、パスワードの変更の有無によって変わってくる
+  // まず、画像の投稿がある場合、imagePathInDBに、画像の保存パスを格納
+  let imagePathInDB = null;
+  if (userImage) {
+    //　画像の前準備
+    const fileName = getFileName("jpg"); //ランダムな文字列を画像の名前にする
+    fs.mkdirSync(path.join(__dirname, "public", "user_images"), {
+      recursive: true,
+    }); //保存先ディレクトリがない場合、作る
+    const imagePath = path.join(__dirname, "public", "user_images", fileName); //画像の保存先
+    fs.writeFileSync(imagePath, userImage, "binary"); //画像を保存する
+    // "/public/user_images/3e5f6M5ofDq3rUHblllvVmMDvnqVqZ7d.jpg"のような形式に変換
+    imagePathInDB = imagePath.replace(/.*\/public\//, "/public/");
+  }
 
-              if (hashedPassword) {
-                db.run(
-                  `
-                      UPDATE users SET profile_image = ?, password = ?, salt = ? WHERE id = ?
-                      `,
-                  [imagePathInDB, hashedPassword, salt, userID],
-                  (err) => {
-                    if (err) {
-                      callback(err);
-                      return;
-                    }
-                    callback(null);
-                    return;
-                  }
-                );
-              } else if (!hashedPassword) {
-                db.run(
-                  `
-                      UPDATE users SET profile_image = ? WHERE id = ?
-                      `,
-                  [imagePathInDB, userID],
-                  (err) => {
-                    if (err) {
-                      callback(err);
-                      return;
-                    }
-                    callback(null);
-                    return;
-                  }
-                );
-              }
-            } else if (hashedPassword && !userImage) {
-              db.run(
-                `
-                    UPDATE users SET password = ?, salt = ? WHERE id = ?
-                    `,
-                [hashedPassword, salt, userID],
-                (err) => {
-                  if (err) {
-                    callback(err);
-                    return;
-                  }
-                  callback(null);
-                  return;
-                }
-              );
-            } else if (!hashedPassword && !userImage) {
-              callback(null);
-              return;
-            }
-          }
-        );
-      }
-    });
-  });
+  // 条件分岐
+  if (userImage && hashedPassword) {
+    const prepare = sql`
+      UPDATE users SET name = $userName, email = $userEmail, profile = $userProfile, profile_image = $imagePathInDB, password = $hashedPassword, salt = $salt WHERE id = $userID
+      `;
+    const param = {
+      $userName: userName,
+      $userEmail: userEmail,
+      $userProfile: userProfile,
+      $imagePathInDB: imagePathInDB,
+      $hashedPassword: hashedPassword,
+      $salt: salt,
+      $userID: userID,
+    };
+    await prepare.execQuery(db, 'run', param);
+    callback(null);
+    return;
+  } else if (userImage && !hashedPassword) {
+    const prepare = sql`
+    UPDATE users SET name = $userName, email = $userEmail, profile = $userProfile, profile_image = $imagePathInDB WHERE id = $userID
+    `;
+    const param = {
+      $userName: userName,
+      $userEmail: userEmail,
+      $userProfile: userProfile,
+      $imagePathInDB: imagePathInDB,
+      $userID: userID,
+    };
+    await prepare.execQuery(db, 'run', param);
+    callback(null);
+    return;
+  } else if (!userImage && hashedPassword) {
+    const prepare = sql`
+    UPDATE users SET name = $userName, email = $userEmail, profile = $userProfile, password = $hashedPassword, salt = $salt WHERE id = $userID
+    `;
+    const param = {
+      $userName: userName,
+      $userEmail: userEmail,
+      $userProfile: userProfile,
+      $hashedPassword: hashedPassword,
+      $salt: salt,
+      $userID: userID,
+    };
+    await prepare.execQuery(db, 'run', param);
+    callback(null);
+    return;
+  } else if (!userImage && !hashedPassword) {
+    const prepare = sql`
+    UPDATE users SET name = $userName, email = $userEmail, profile = $userProfile WHERE id = $userID
+    `;
+    const param = {
+      $userName: userName,
+      $userEmail: userEmail,
+      $userProfile: userProfile,
+      $userID: userID,
+    };
+    await prepare.execQuery(db, 'run', param);
+    callback(null);
+    return;
+  }
 };
 
 //データベースからユーザを検索する関数(サインインのとき)
@@ -536,9 +526,9 @@ const findUserByUserID = async (currentUserID, userID) => {
   LEFT JOIN relationships
   ON relationships.follower_id = ${currentUserID} AND relationships.followed_id = users.id
   WHERE users.is_deleted = 0 AND users.id = ${userID}
-  `
+  `;
 
-  return await prepare.execQuery(db, 'all');
+  return await prepare.execQuery(db, "all");
 };
 
 // 検索ワードを使って、ユーザ名と突合し(あいまい検索)、データベースからユーザを検索する
