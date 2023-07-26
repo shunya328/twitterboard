@@ -362,35 +362,35 @@ const showPost = async (req, res, postID, currentUserID) => {
   //     res.end(err.message);
   //     return;
   //   }
-    const rows = await getReplyPost(postID);
+  const rows = await getReplyPost(postID);
 
-    res.write("<h2>リプライたち</h2>");
+  res.write("<h2>リプライたち</h2>");
 
-    // ここにrowsの数だけforループしてそれぞれの投稿を表示するコードを実装！！
-    for (let row of rows) {
-      res.write('<li style="border:1px solid #888; padding: 1em">');
+  // ここにrowsの数だけforループしてそれぞれの投稿を表示するコードを実装！！
+  for (let row of rows) {
+    res.write('<li style="border:1px solid #888; padding: 1em">');
 
-      if (row.is_deleted === 0) {
-        if (row.profile_image) {
-          res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
-        } else {
-          res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
-        }
-        res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
-        res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
-        if (row.image) {
-          res.write(
-            `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
-          );
-        }
-        res.write(`${row.date}<br>`);
+    if (row.is_deleted === 0) {
+      if (row.profile_image) {
+        res.write(`<img src="${row.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
       } else {
-        res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`);
+        res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
       }
-
-      res.write("</li>\n");
+      res.write(`<a href="/users/${row.user_id}/1">${row.name}</a><br>`);
+      res.write(`<a href="/post/${row.id}">${escapeHTML(row.content)}</a><br>`);
+      if (row.image) {
+        res.write(
+          `<a href="/post/${row.id}"><img src="${row.image}" alt="投稿画像" style="width:300px; height:auto" /></a>`
+        );
+      }
+      res.write(`${row.date}<br>`);
+    } else {
+      res.write(`<a href="/post/${row.id}">投稿は削除されました</a>`);
     }
-    footer(req, res);
+
+    res.write("</li>\n");
+  }
+  footer(req, res);
   // });
 };
 
@@ -562,50 +562,42 @@ const searchPage = (req, res, searchQueryKey) => {
 };
 
 // ユーザ検索の結果を返すページ
-const searchUserResultPage = (req, res, currentUserID, urlQueryParam) => {
+const searchUserResultPage = async (req, res, currentUserID, urlQueryParam) => {
   console.log("searchWord: ", urlQueryParam);
-  findUserBySearchWord(currentUserID, urlQueryParam, (err, users) => {
-    if (err) {
-      // エラーハンドリング
-      console.error(err);
-      res.statusCode = 500;
-      res.end("検索時にエラーが発生しました");
-      return;
+  const users = await findUserBySearchWord(currentUserID, urlQueryParam);
+  header(req, res);
+
+  res.write(`<h1>検索ワード"${urlQueryParam}"の検索結果</h1>`);
+
+  if (users.length === 0) {
+    res.write("<h3>ユーザはいません</h3>");
+  }
+
+  res.write("<ul>");
+  for (let user of users) {
+    res.write("<li>");
+    if (user.profile_image) {
+      res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
+    } else {
+      res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
     }
-    header(req, res);
-
-    res.write(`<h1>検索ワード"${urlQueryParam}"の検索結果</h1>`);
-
-    if (users.length === 0) {
-      res.write("<h3>ユーザはいません</h3>");
+    res.write(`<a href="/users/${user.id}/1">${user.name}</a>`);
+    // フォローするボタンの追加
+    if (user.is_following === 1) {
+      res.write("<span>フォロー済み</span>");
+      res.write(`<form action="/unfollow/${user.id}" method="post">`);
+      res.write('<button type="submit">フォロー解除</button>');
+      res.write("</form>");
+    } else if (user.id !== currentUserID) {
+      res.write(`<form action="/following/${user.id}" method="post">`);
+      res.write('<button type="submit">フォローする</button>');
+      res.write("</form>");
     }
+  }
+  res.write("</ul>");
 
-    res.write("<ul>");
-    for (let user of users) {
-      res.write("<li>");
-      if (user.profile_image) {
-        res.write(`<img src="${user.profile_image}" alt="プロフィール画像"  style="width:80px; height:auto"/>`);
-      } else {
-        res.write(`<img src="/public/no_image.jpeg" alt="プロフィール画像" style="width:80px; height:auto" />`);
-      }
-      res.write(`<a href="/users/${user.id}/1">${user.name}</a>`);
-      // フォローするボタンの追加
-      if (user.is_following === 1) {
-        res.write("<span>フォロー済み</span>");
-        res.write(`<form action="/unfollow/${user.id}" method="post">`);
-        res.write('<button type="submit">フォロー解除</button>');
-        res.write("</form>");
-      } else if (user.id !== currentUserID) {
-        res.write(`<form action="/following/${user.id}" method="post">`);
-        res.write('<button type="submit">フォローする</button>');
-        res.write("</form>");
-      }
-    }
-    res.write("</ul>");
-
-    footer(req, res);
-    return;
-  });
+  footer(req, res);
+  return;
 };
 
 // 画像ファイルを読み込む関数

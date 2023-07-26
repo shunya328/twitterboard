@@ -13,11 +13,9 @@ const sql = (strings, ...values) => {
 
   const execQuery = function (db, method, param) {
     return new Promise((resolve, reject) => {
-
       switch (method) {
         case "all":
           db.all(sqlQuery, param, (err, rows) => {
-
             if (err) {
               return reject(err);
             }
@@ -25,7 +23,7 @@ const sql = (strings, ...values) => {
           });
           break;
         case "get":
-          db.get(sqlQuery,param, (err, row) => {
+          db.get(sqlQuery, param, (err, row) => {
             if (err) {
               return reject(err);
             }

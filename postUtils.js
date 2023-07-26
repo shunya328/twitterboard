@@ -1,7 +1,6 @@
 const { header, footer } = require("./pageUtils");
-const { updateSession, insertPost, updateUser, withdrawalUser, deletePost } = require("./databaseUtils");
+const { insertPost, updateUser, withdrawalUser } = require("./databaseUtils");
 const { postLogout } = require("./sessions");
-const { escapeHTML } = require("./escapeHTML");
 const { extractBoundary, parseFormData } = require("./multipartFormDataParser");
 
 // 投稿する！(POST)
@@ -196,15 +195,10 @@ const updateEditProfilePage = (req, res, currentUser, maxUserIdWordCount, fileSi
 };
 
 // （POST）ユーザを論理削除する関数
-const postWithdrawalUser = (req, res, currentSession, sessionID) => {
-  withdrawalUser(currentSession.user_id, (err) => {
-    if (err) {
-      console.error(err);
-      return;
-    }
-    console.log(`userID=${currentSession.user_id}のユーザが削除されました`);
-    postLogout(req, res, sessionID);
-  });
+const postWithdrawalUser = async (req, res, currentSession, sessionID) => {
+  await withdrawalUser(currentSession.user_id);
+  console.log(`userID=${currentSession.user_id}のユーザが削除されました`);
+  postLogout(req, res, sessionID);
 };
 
 module.exports = {

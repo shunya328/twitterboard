@@ -88,22 +88,21 @@ db.run(`CREATE TABLE IF NOT EXISTS sessions (
 )`);
 
 // セッションに必要な情報を登録
-const setSession = (session_id, user_id, user_name, user_email, user_profile, user_profile_image, callback) => {
-  db.run(
-    `
+const setSession = async (session_id, user_id, user_name, user_email, user_profile, user_profile_image, callback) => {
+  const prepare = sql`
   INSERT INTO sessions (
     session_id, user_id, name, email, profile, profile_image
-  ) VALUES (?, ?, ?, ?, ?, ?)
-  `,
-    [session_id, user_id, user_name, user_email, user_profile, user_profile_image],
-    (err) => {
-      if (err) {
-        callback(err);
-        return;
-      }
-      callback(null);
-    }
-  );
+  ) VALUES ($session_id, $user_id, $user_name, $user_email, $user_profile, $user_profile_image)
+  `;
+  const param = {
+    $session_id: session_id,
+    $user_id: user_id,
+    $user_name: user_name,
+    $user_email: user_email,
+    $user_profile: user_profile,
+    $user_profile_image: user_profile_image,
+  };
+  return await prepare.execQuery(db, "run", param);
 };
 
 //受け取ったセッションIDのデータを探して突合
@@ -200,7 +199,7 @@ const getAllPostOfUserPagenation = async (userID, currentPage, limit) => {
   SELECT COUNT(*) AS total_count
   FROM posts
   INNER JOIN users ON posts.user_id = users.id
-  WHERE posts.user_id = ${userID}
+  WHERE posts.user_id = $userID
   `;
   const param1 = {
     $userID: userID,
@@ -210,9 +209,9 @@ const getAllPostOfUserPagenation = async (userID, currentPage, limit) => {
   SELECT posts.*, users.name, users.profile, users.profile_image, users.is_deleted AS user_is_deleted
   FROM posts
   INNER JOIN users ON posts.user_id = users.id
-  WHERE posts.user_id = ${userID}
+  WHERE posts.user_id = $userID
   ORDER BY posts.date DESC
-  LIMIT ${limit} OFFSET ${offset}
+  LIMIT $limit OFFSET $offset
   `;
   const param2 = {
     $userID: userID,
@@ -249,7 +248,7 @@ const getAllUsers = async (currentUserID) => {
 
 //データベースに文字＆画像を同時に投稿する関数
 const insertPost = (content, image, reply_to, currentUserID) => {
-  return new Promise(async (resolve, reject) => {
+  return new Promise(async (resolve) => {
     let imagePathInDB = null;
     if (image) {
       //　画像の前準備
@@ -445,7 +444,7 @@ const updateUser = async (userID, userName, userEmail, userPassword, userProfile
       $salt: salt,
       $userID: userID,
     };
-    await prepare.execQuery(db, 'run', param);
+    await prepare.execQuery(db, "run", param);
     callback(null);
     return;
   } else if (userImage && !hashedPassword) {
@@ -459,7 +458,7 @@ const updateUser = async (userID, userName, userEmail, userPassword, userProfile
       $imagePathInDB: imagePathInDB,
       $userID: userID,
     };
-    await prepare.execQuery(db, 'run', param);
+    await prepare.execQuery(db, "run", param);
     callback(null);
     return;
   } else if (!userImage && hashedPassword) {
@@ -474,7 +473,7 @@ const updateUser = async (userID, userName, userEmail, userPassword, userProfile
       $salt: salt,
       $userID: userID,
     };
-    await prepare.execQuery(db, 'run', param);
+    await prepare.execQuery(db, "run", param);
     callback(null);
     return;
   } else if (!userImage && !hashedPassword) {
@@ -487,34 +486,41 @@ const updateUser = async (userID, userName, userEmail, userPassword, userProfile
       $userProfile: userProfile,
       $userID: userID,
     };
-    await prepare.execQuery(db, 'run', param);
+    await prepare.execQuery(db, "run", param);
     callback(null);
     return;
   }
 };
 
 //データベースからユーザを検索する関数(サインインのとき)
-const findUserSignIn = (userName, inputPassword, callback) => {
-  db.all(`SELECT * FROM users WHERE name = ?`, [userName], (err, rows) => {
-    if (err) {
-      callback(err);
-      return;
-    }
-    const isVerified = rows[0] ? verifyPassword(inputPassword, rows[0].password, rows[0].salt) : null;
-
-    callback(null, rows[0], isVerified);
+const findUserSignIn = (userName, inputPassword) => {
+  return new Promise(async (resolve) => {
+    const prepare = sql`
+    SELECT * FROM users WHERE name = $userName
+    `;
+    const param = {
+      $userName: userName,
+    };
+    const row = await prepare.execQuery(db, "get", param);
+    const isVerified = row ? verifyPassword(inputPassword, row.password, row.salt) : null;
+    resolve({
+      user: row,
+      isVerified: isVerified,
+    });
   });
 };
 
 //データベースからユーザを検索する（サインアップのとき）
-const findUserSignUp = (userName, userEmail, userPassword, callback) => {
-  db.all(`SELECT * FROM users WHERE name = ? AND email = ?`, [userName, userEmail], (err, rows) => {
-    if (err) {
-      callback(err);
-      return;
-    }
-    callback(null, rows[0]);
-  });
+const findUserSignUp = async (userName, userEmail) => {
+  const prepare = sql`
+  SELECT * FROM users WHERE name = $userName AND email = $userEmail
+  `;
+  const param = {
+    $userName: userName,
+    $userEmail: userEmail,
+  };
+
+  return await prepare.execQuery(db, "get", param);
 };
 
 // ユーザIDを使ってデータベースからユーザを検索する(自身がフォローしているかどうかも取得)
@@ -532,45 +538,37 @@ const findUserByUserID = async (currentUserID, userID) => {
 };
 
 // 検索ワードを使って、ユーザ名と突合し(あいまい検索)、データベースからユーザを検索する
-const findUserBySearchWord = (currentUserID, searchWord, callback) => {
-  db.all(
-    `SELECT users.*,
+const findUserBySearchWord = async (currentUserID, searchWord) => {
+  const prepare = sql`
+  SELECT users.*,
   CASE WHEN relationships.followed_id IS NULL THEN 0 ELSE 1 END AS is_following
   FROM users
   LEFT JOIN relationships
-  ON relationships.follower_id = ? AND relationships.followed_id = users.id
-  WHERE users.is_deleted = 0 AND name LIKE '%' || ? || '%'
-  `,
-    [currentUserID, searchWord],
-    (err, rows) => {
-      if (err) {
-        console.error(err);
-        callback(err, null);
-        return;
-      }
-      callback(null, rows);
-    }
-  );
+  ON relationships.follower_id = $currentUserID AND relationships.followed_id = users.id
+  WHERE users.is_deleted = 0 AND name LIKE '%' || $searchWord || '%'
+  `;
+  const param = {
+    $currentUserID: currentUserID,
+    $searchWord: searchWord,
+  };
+  return await prepare.execQuery(db, "all", param);
 };
 
 // ユーザを退会する（論理削除）と共に、そのユーザの投稿したデータも論理削除
-const withdrawalUser = (userID, callback) => {
-  db.run(`UPDATE users SET is_deleted = 1 WHERE id = ?`, [userID], (err) => {
-    if (err) {
-      onsole.error(err);
-      callback(err);
-      return;
-    }
-    db.run(`UPDATE posts SET is_deleted = 1 WHERE user_id = ?`, [userID], (err) => {
-      if (err) {
-        console.error(err);
-        callback(err);
-        return;
-      }
-      console.log("withdrawalUserが呼ばれました");
-      callback(null);
-    });
-  });
+const withdrawalUser = async (userID) => {
+  const param = {
+    $userID: userID,
+  };
+  const userPrepare = sql`
+  UPDATE users SET is_deleted = 1 WHERE id = $userID
+  `;
+  const postPrepare = sql`
+  UPDATE posts SET is_deleted = 1 WHERE user_id = $userID
+  `;
+
+  await userPrepare.execQuery(db, "run", param);
+  await postPrepare.execQuery(db, "run", param);
+  return null;
 };
 
 module.exports = {
